@@ -1,0 +1,44 @@
+citHeader("To cite mixsep in publications please use:")
+
+## R >= 2.8.0 passes package metadata to citation().
+if(!exists("meta") || is.null(meta)) meta <- packageDescription("mixsep")
+year <- sub("-.*", "", meta$Date)
+note <- sprintf("R package version %s", meta$Version)
+
+
+citEntry(entry = "Article",
+  title        = "Identifying contributors of DNA mixtures by means of quantitative information of STR typing",
+  author       = personList(as.person("Torben Tvedebrink"),
+                            as.person("P. S. Eriksen"),
+                            as.person("H. S. Mogensen"),
+                            as.person("N. Morling")),
+  journal      = "Journal of Computational Biology",
+  year         = "2011",
+  note         = "To Appear",
+
+  textVersion  =
+  paste("Torben Tvedebrink, PS Eriksen, HS Mogensen and N Morling (2011).",
+        "Identifying contributors of DNA mixtures by means of quantitative information of STR typing.",
+        "Journal of Computational Biology, To Appear")
+)
+
+
+citEntry(entry = "Manual",
+         title = "mixsep: DNA mixture separation",
+         author = personList(as.person("Torben Tvedebrink")),
+         year = year,
+         note = note,
+         url = "http://CRAN.R-project.org/package=mixsep",
+
+         textVersion =
+         paste("Torben Tvedebrink",
+   	       sprintf("(%s).", year),	 
+               "mixsep: DNA mixture separation.",
+	       paste(note, ".", sep = ""),
+               "URL http://CRAN.R-project.org/package=mixsep"),
+	 header = "and/or"
+)
+
+
+
+
