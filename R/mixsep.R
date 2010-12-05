@@ -29,19 +29,19 @@ mixturesep <- function(x,nx=list(locus="sys",allele="allele",area="area",height=
       bm <- list()
       if(fm==1) bm <- c(bm,"U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui)[c("profiles","stats")]))
       if(fm==2){
+        bm <- c(bm,"U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui)[c("profiles","stats")]))
         bm <- c(bm,"F1/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=list(fixedProfiles[[1]]))[c("profiles","stats")]))
         bm <- c(bm,"F2/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=list(fixedProfiles[[2]]))[c("profiles","stats")]))
-        bm <- c(bm,"U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui)[c("profiles","stats")]))
       }
       if(m==3 & fm<3) names(bm) <- paste(names(bm),"U",sep="/")
       if(fm==3){
-        bm <- c(bm,"F1/F2/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=fixedProfiles[c(1,2)])[c("profiles","stats")]))
-        bm <- c(bm,"F1/F3/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=fixedProfiles[c(1,3)])[c("profiles","stats")]))
-        bm <- c(bm,"F2/F3/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=fixedProfiles[c(2,3)])[c("profiles","stats")]))
+        bm <- c(bm,"U/U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui)[c("profiles","stats")]))
         bm <- c(bm,"F1/U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=list(fixedProfiles[[1]]))[c("profiles","stats")]))
         bm <- c(bm,"F2/U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=list(fixedProfiles[[2]]))[c("profiles","stats")]))
         bm <- c(bm,"F3/U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=list(fixedProfiles[[3]]))[c("profiles","stats")]))
-        bm <- c(bm,"U/U/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui)[c("profiles","stats")]))
+        bm <- c(bm,"F1/F2/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=fixedProfiles[c(1,2)])[c("profiles","stats")]))
+        bm <- c(bm,"F1/F3/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=fixedProfiles[c(1,3)])[c("profiles","stats")]))
+        bm <- c(bm,"F2/F3/U"=list(mixturesep(y,m=m,alternatives=FALSE,trace=FALSE,gui=gui,fixedProfiles=fixedProfiles[c(2,3)])[c("profiles","stats")]))
       }
     }
     Fixed <- grep("Fixed",names(x))
@@ -102,41 +102,33 @@ mixturesep <- function(x,nx=list(locus="sys",allele="allele",area="area",height=
     noCombs <- alts$noCombs
     alts <- alts$alts[,match(locusorder,names(xs)),drop=FALSE]
     if(exists("bm")){
-      BMstats <- as.data.frame(do.call("rbind",lapply(bm,function(z) z$stats)))
-      BMstats$R2 <- round(min(BMstats$tau)/BMstats$tau,4)
-      BMstats$R2[which.min(BMstats$tau)] <- ""
+      BMstats <- do.call("rbind",lapply(bm,function(z) z$stats))
       BM <- do.call("rbind",lapply(bm,function(z) apply(z$profiles,2,paste,collapse="/")))
       if(all(alts=="")) alts <- BM
       else alts <- rbind(BM,alts)
     }
     dimnames(alts) <- list(alternatives=1:nrow(alts),Locus=locusorder)
-    tauhat <- tav(xs,alpha=alpha,m=m)
     res <- list(profiles=profiles,alternatives=alts,noCombs=noCombs,Fstats=Fstats, ## was: data=y,
                 expectedAreas=expAreas[,c("locus","allele","exp")],likelihood=L1,
-                stats=round(c(alpha=alpha,tau=tauhat),round))
+                stats=round(c(alpha=alpha,tau=tav(xs,alpha=alpha,m=m)),round))
     if(exists("bm")){
       res$bm <- names(bm)
       res$bmstats <- BMstats
-      res$R2 <- round(min(BMstats$tau)/tauhat,4)
     }
   }
   else{
-    tauhat <- tav(xs,alpha=alpha,m=m)
     res <- list(profiles=profiles, ## was: data=y,
                 expectedAreas=expAreas[,c("locus","allele","exp")],likelihood=L1,
-                stats=round(c(alpha=alpha,tau=tauhat),round))
+                stats=round(c(alpha=alpha,tau=tav(xs,alpha=alpha,m=m)),round))
     res$alternatives <- matrix("",nrow=1,ncol=length(locusorder))
     res$noCombs <- NA
     if(exists("bm")){
-      BMstats <- as.data.frame(do.call("rbind",lapply(bm,function(z) z$stats)))
-      BMstats$R2 <- round(min(BMstats$tau)/BMstats$tau,4)
-      BMstats$R2[which.min(BMstats$tau)] <- ""
+      BMstats <- do.call("rbind",lapply(bm,function(z) z$stats))
       BM <- do.call("rbind",lapply(bm,function(z) apply(z$profiles,2,paste,collapse="/")))
 #      BM <- do.call("rbind",lapply(bm,function(z) apply(z,2,paste,collapse="/")))
       dimnames(BM) <- list(BestMatch=1:nrow(BM),Locus=locusorder)
       res$bm <- names(bm)
       res$bmstats <- BMstats
-      res$R2 <- round(min(BMstats$tau)/tauhat,4)
       res$alternatives <- BM
       res$noCombs <- 1
     }
@@ -308,6 +300,7 @@ locus.alternative <- function(x,s,J,m,est,p=0.001){
   ## We already got a best match configuration in all loci
   jmax <- x[[s]]$Jmax[1]
   ## Test for alternatives
+#  print(names(x)[s])
   if(length(J)==1) return(list(alts=alts.sort,Fstats=Fstats))
   else{
     for(j in (1:length(J))[-jmax]){

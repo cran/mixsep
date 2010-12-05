@@ -4,7 +4,6 @@ library(MASS)
 library(RODBC)
 
 mixsep <- function(){
-  version <- tclVar("0.1-1")
   killR <- tclVar("")
   font14bf <- tkfont.create(family = "helvetica", size = 14, weight = "bold")
   font9bf <- tkfont.create(family = "helvetica", size = 9, weight = "bold")
@@ -57,7 +56,7 @@ mixsep <- function(){
       else{
         querySelect <- as.data.frame(do.call("rbind",strsplit(querySelection,":")))
         if(ncol(querySelect)>1){ ## convert rows to additional selection expressions:
-          DBselectors <- unlist(strsplit(tclvalue(dbcols),"\\,"))
+          DBselectors <- unlist(strsplit(tclvalue(dbcols)),"\\,")
           ANDselect <- apply(querySelect[,-1,drop=FALSE],1,function(rw,cl) paste(paste("AND ",cl,"='",rw,"'",sep=""),collapse=" "),cl=DBselectors)
         }
         else{ ANDselect <- rep("",nrow(querySelect)) } ## make blank elements
@@ -90,13 +89,10 @@ mixsep <- function(){
     queryFrame <- tkframe(dbmain)
     tkgrid(tklabel(queryFrame,text="Obtain entries meeting the following query:",font=font9bf),columnspan=2)
     qradio1 <- tkradiobutton(queryFrame,text=paste("'",tclvalue(dbcase),"' column contains:",sep=""),variable=queryRadio,value="1")
-    qbox1 <- tkentry(queryFrame,width="30",textvariable=querySample,background="white")
-    tkgrid(qradio1,qbox1,sticky="w")
-    tkbind(qbox1,"<Return>",getQuery)
-    qbox2 <- tkentry(queryFrame,width="30",textvariable=queryQuery,background="white")
-    tkgrid(tkradiobutton(queryFrame,text="Using this SQL-command:",variable=queryRadio,value="2"),qbox2,sticky="w")
-    tkbind(qbox2,"<Return>",getQuery)
-    tcl(qradio1,"select") ## pre-selects 'dbcase' query
+    tkgrid(qradio1,tkentry(queryFrame,width="30",textvariable=querySample),sticky="w")
+    tkgrid(tkradiobutton(queryFrame,text="Using this SQL-command:",variable=queryRadio,value="2"),
+           tkentry(queryFrame,width="30",textvariable=queryQuery),sticky="w")
+    tcl(qradio1,"select") ## pre-selects Proeve_ID query
     tkgrid(tklabel(queryFrame,text=" "))
     tkgrid(tkbutton(queryFrame,text="Submit database query",command=getQuery),columnspan=2,sticky="n")
     tkgrid(queryFrame)
@@ -241,7 +237,6 @@ mixsep <- function(){
           tclvalue(pars) <<- ""
           tclvalue(res) <<- ""
           tclvalue(estTau) <<- ""
-          tclvalue(estR2) <<- ""
           tclvalue(estAlpha) <<- ""
           tclvalue(estAlpha2) <<- ""
           tclvalue(dropLocus) <<- ""
@@ -249,7 +244,6 @@ mixsep <- function(){
           tclvalue(known2Set) <<- 0
           tclvalue(known3Set) <<- 0
           tclvalue(plotselect) <<- ""
-          tclvalue(selectedProf) <<- ""
           TAB2()
           TAB3()
           TAB4()
@@ -292,7 +286,6 @@ mixsep <- function(){
           tclvalue(pars) <<- ""
           tclvalue(res) <<- ""
           tclvalue(estTau) <<- ""
-          tclvalue(estR2) <<- ""
           tclvalue(estAlpha) <<- ""
           tclvalue(estAlpha2) <<- ""
           tclvalue(dropLocus) <<- ""
@@ -300,7 +293,6 @@ mixsep <- function(){
           tclvalue(known2Set) <<- 0
           tclvalue(known3Set) <<- 0
           tclvalue(plotselect) <<- ""
-          tclvalue(selectedProf) <<- ""
           TAB2()
           TAB3()
           TAB4()
@@ -330,7 +322,6 @@ mixsep <- function(){
     tclvalue(pars) <<- ""
     tclvalue(res) <<- ""
     tclvalue(estTau) <<- ""
-    tclvalue(estR2) <<- ""
     tclvalue(estAlpha) <<- ""
     tclvalue(estAlpha2) <<- ""
     tclvalue(dropLocus) <<- ""
@@ -338,7 +329,6 @@ mixsep <- function(){
     tclvalue(known2Set) <<- 0
     tclvalue(known3Set) <<- 0
     tclvalue(plotselect) <<- ""
-    tclvalue(selectedProf) <<- ""
     TAB2()
     TAB3()
     TAB4()
@@ -364,13 +354,13 @@ mixsep <- function(){
     else if(is.na(height) | (height<1)){
       msdata <- get("mixsep.data",env=.GlobalEnv)
       data <- msdata[[tclvalue(dataid)]]$data
-      data$heightFromArea <- as.numeric(paste(data[,area]))/10
+      data$height <- data[,area]/10
       height <- ncol(data)
     }
     else if(is.na(area) | (area<1)){
       msdata <- get("mixsep.data",env=.GlobalEnv)
       data <- msdata[[tclvalue(dataid)]]$data
-      data$areaFromHeight <- as.numeric(paste(data[,height]))*10
+      data$area <- data[,height]*10
       area <- ncol(data)
     }
     else{
@@ -481,10 +471,6 @@ mixsep <- function(){
       return(NULL)
     }
     tclvalue(estAlpha) <<- res$stats[1]
-    tclvalue(estR2) <<- ""
-    if(!is.null(res$bm)){
-      tclvalue(estR2) <<- res$R2
-    }
     if(length(res$stats)==3){
       tclvalue(estAlpha2) <<- res$stats[2]
       tclvalue(estTau) <<- res$stats[3]
@@ -503,14 +489,12 @@ mixsep <- function(){
     tcl("update","idletasks")
     tk2notetab.select(tabwin,"Results")
   }
-  plotEpg <- function(plot=TRUE){
+  plotEpg <- function(){
     msdata <- get("mixsep.data",envir=.GlobalEnv)
-    result <- msdata[[paste(tclvalue(dataid))]]$result
-    data <- result$data
+    data <- msdata[[paste(tclvalue(dataid))]]$result$data
     loci <- unique(paste(data$locus))
     plotCombo <- rep(0,length(loci))
     plottedProfiles <- character(length(loci))
-    selectedProfiles <- numeric(length(loci))
     for(i in 1:length(loci)){
       if(paste(tclvalue(paste(tclvalue(dataid),loci[i],sep=":")))=="A"){
         if(tclvalue(tkcurselection(LOCI[[i]]))==""){
@@ -521,22 +505,15 @@ mixsep <- function(){
         else{
           plotCombo[i] <- as.numeric(tkcurselection(LOCI[[i]]))+1
           plottedProfiles[i] <- msdata[[paste(tclvalue(dataid))]]$result$alternatives[plotCombo[i],i]
-          selectedProfiles[i] <- as.numeric(tkcurselection(LOCI[[i]]))+2+length(result$bm) ## 2=[NULL]+[Best match]
         }
       }
       else{
         plotCombo[i] <- as.numeric(tclvalue(paste(tclvalue(dataid),loci[i],sep=":")))
         plottedProfiles[i] <- paste(msdata[[paste(tclvalue(dataid))]]$result$profiles[,i],collapse="/")
-        selectedProfiles[i] <- as.numeric(tclvalue(paste(tclvalue(dataid),loci[i],sep=":")))+1
       }
     }
-    tclvalue(selectedProf) <<- paste(selectedProfiles,collapse=",")
     if(all(plotCombo==0)){
       expArea <- msdata[[paste(tclvalue(dataid))]]$result$expectedAreas
-      tclvalue(estR2) <<- ""
-      if(!is.null(msdata[[paste(tclvalue(dataid))]]$result$bm)){
-        tclvalue(estR2) <<- msdata[[paste(tclvalue(dataid))]]$result$R2
-      }
       tclvalue(estAlpha) <<- msdata[[paste(tclvalue(dataid))]]$result$stats[1]
       if(length(msdata[[paste(tclvalue(dataid))]]$result$stats)==3){
         tclvalue(estAlpha2) <<- msdata[[paste(tclvalue(dataid))]]$result$stats[2]
@@ -545,76 +522,62 @@ mixsep <- function(){
       else tclvalue(estTau) <<- msdata[[paste(tclvalue(dataid))]]$result$stats[2]
     }
     else{
-      if(!is.null(msdata[[paste(tclvalue(dataid))]]$result$bm)){
-        tauR2 <- min(msdata[[paste(tclvalue(dataid))]]$result$stats[["tau"]],msdata[[paste(tclvalue(dataid))]]$result$bmstats$tau)
-      }
-      else tauR2 <- msdata[[paste(tclvalue(dataid))]]$result$stats[["tau"]]
-      expArea <- computeExpArea(msdata[[paste(tclvalue(dataid))]],plotCombo,tauR2)
+      expArea <- computeExpArea(msdata[[paste(tclvalue(dataid))]],plotCombo)
       tclvalue(estAlpha) <<- round(expArea$alpha[1],4)
       if(length(expArea$alpha)==2) tclvalue(estAlpha2) <<- round(expArea$alpha[2],4)
       tclvalue(estTau) <<- round(expArea$tau,4)
-      tclvalue(estR2) <<- round(expArea$R2,4)
       expArea <- expArea$data
     }
     tclvalue(plotselect) <<- paste(plotCombo,sep=",",collapse=",")
-    if(plot){
-      if(tclvalue(newPlot)==1){ if(capabilities("X11")) x11() else windows() }
-      data <- merge(data,expArea,by=c("locus","allele"))
-      if(length(grep("null",names(dev.cur())))>0){
-        if(capabilities("X11")) x11() else windows() 
-      }
-      names(plottedProfiles) <- loci
-      plotEPG(data,addProfile=(tclvalue(addProfile)==1),profiles=plottedProfiles)
-    }    
+    if(tclvalue(newPlot)==1){ if(capabilities("X11")) x11() else windows() }
+    data <- merge(data,expArea,by=c("locus","allele"))
+    if(length(grep("null",names(dev.cur())))>0){
+      if(capabilities("X11")) x11() else windows() 
+    }
+    names(plottedProfiles) <- loci
+    plotEPG(data,addProfile=(tclvalue(addProfile)==1),profiles=plottedProfiles)
   }
-  exportResult <- function(){ ### HERE - Export of data does not work
-    plotEpg(plot=FALSE) ## Refreshes the selection
+  exportResult <- function(){
     result <- get("mixsep.data",envir=.GlobalEnv)[[paste(tclvalue(dataid))]]$result
-    ## Profiles
     res.prof <- apply(result$profiles,2,paste,collapse="/")
     exportFrame <- rbind(res.prof,result$alternatives)
-    if(is.null(result$bm)){ ## If no fixed profiles
+    if(is.null(result$bm)){
       rownames(exportFrame) <- c("Best match","Alternatives",rep("",nrow(exportFrame)-2))
-      exportParams <- matrix(c(result$stats,""),nrow=1,ncol=length(result$stats)+1,
-                             dimnames=list("Profiles"="Best match","Parameters"=c(names(result$stats),"R2")))
+      exportStats <- rbind(c(names(result$stats),rep("",ncol(exportFrame)-length(result$stats))),
+                           c(result$stats,rep("",ncol(exportFrame)-length(result$stats))))
+      exportFrame <- rbind(exportFrame,exportStats)
+      rownames(exportFrame)[nrow(exportFrame)] <- "Best match parameters"
+      selected <- as.numeric(unlist(strsplit(tclvalue(plotselect),",")))+1
+      if(length(selected)>0){
+        for(i in 1:ncol(exportFrame)) exportFrame[selected[i],i] <- paste(exportFrame[selected[i],i],"*")
+        if(tclvalue(estAlpha2)=="") exportFrame <- rbind(exportFrame,"Selected (*) parameters"=c(tclvalue(estAlpha),tclvalue(estTau),rep("",i-2)))
+        else exportFrame <- rbind(exportFrame,"Selected (*) parameters"=c(tclvalue(estAlpha),tclvalue(estAlpha2),tclvalue(estTau),rep("",i-3)))
+      }
     }
-    else{ ## If fixed profiles
-      fixedNames <- c(paste(unlist(lapply(rownames(result$profiles), cropName)),collapse="/"),result$bm)
-      rownames(exportFrame) <- c(fixedNames,"Alternatives",rep("",nrow(exportFrame)))[1:nrow(exportFrame)]
-      exportParams <- rbind(c(result$stats,result$R2),result$bmstats)
-      rownames(exportParams) <- fixedNames
+    else{
+      rwnm <- paste(unlist(lapply(dimnames(result$profiles)[[1]], cropName)),sep="/",collapse="/")
+      rownames(exportFrame) <- c(rwnm,result$bm,"Alternatives",rep("",nrow(exportFrame)-2))[1:nrow(exportFrame)]
+      exportStats <- rbind(c(names(result$stats),rep("",ncol(exportFrame)-length(result$stats))),
+                           c(result$stats,rep("",ncol(exportFrame)-length(result$stats))))
+      exportStats <- rbind(exportStats,cbind(result$bmstats,matrix("",nrow(result$bmstats),ncol(exportFrame)-length(result$stats))))
+      rownames(exportStats)[-1] <- c(rwnm,result$bm)
+      exportFrame <- rbind(exportFrame,exportStats)
+      selected <- as.numeric(unlist(strsplit(tclvalue(plotselect),",")))+1
+      if(length(selected)>0){
+        for(i in 1:ncol(exportFrame)) exportFrame[selected[i],i] <- paste(exportFrame[selected[i],i],"*")
+        if(tclvalue(estAlpha2)=="") exportFrame <- rbind(exportFrame,"Selected (*) parameters"=c(tclvalue(estAlpha),tclvalue(estTau),rep("",i-2)))
+        else exportFrame <- rbind(exportFrame,"Selected (*) parameters"=c(tclvalue(estAlpha),tclvalue(estAlpha2),tclvalue(estTau),rep("",i-3)))
+      }
     }
-
-    selected <- as.numeric(unlist(strsplit(tclvalue(selectedProf),",")))
-    ## If selected
-    if(any(selected>1)){
-      for(i in 1:ncol(exportFrame)) exportFrame[selected[i],i] <- paste(exportFrame[selected[i],i],"* ",sep="")
-        if(tclvalue(estAlpha2)=="") exportParams <- rbind(exportParams,"Selected (*)"=c(tclvalue(estAlpha),tclvalue(estTau),tclvalue(estR2)))
-        else exportParams <- rbind(exportParams,"Selected (*)"=c(tclvalue(estAlpha),tclvalue(estAlpha2),tclvalue(estTau),tclvalue(estR2)))
-    }
-
-    initFile <- paste(unlist(strsplit(tclvalue(dataid),"\\.")))
-    if(length(initFile)>1) initFile <- paste(initFile[-length(initFile)],sep=".") ## May be obtained from database (no file extension)
-    exportFileName <- tclvalue(tkgetSaveFile(initialfile=paste(initFile,"_result.txt",sep=""),
-                                             initialdir=tclvalue(path),filetypes="{{Text File} {.txt}}"))
-    if(exportFileName!=""){
-      sink(file=paste(exportFileName))
-      cat("MixSep Output\n\n")
-      cat(paste("Analysis of case file:",tclvalue(dataid),"\n\n"))
-      cat("==== PROFILES ====\n\n")
-      print.noquote(exportFrame)
-      cat("=== PARAMETERS ===\n\n")
-      print.noquote(exportParams)
-      cat("\n\n==== SETTINGS ====\n\n")
-      cat(paste("Number of contributors:"),tclvalue(noContrib),"\n")
-      cat(paste("Level of significance:"),tclvalue(altp),"\n")
-      cat(paste("Number of combinations:"),format(result$noCombs,big.mark=",",scientific=2),"\n")
-      cat(paste("\n\n\nAnalysed using MixSep version",tclvalue(version)))
-      sink()
-    }
-    else tkmessageBox(title="No output file",message="No output file specified",icon="warning",type="ok")
+    exportFileName <- tclvalue(tkgetSaveFile(initialfile=paste(unlist(strsplit(tclvalue(dataid),"\\."))[1],"_result.csv",sep=""),
+                                             initialdir=tclvalue(path),filetypes="{{CVS File} {.csv}}"))
+    if(nzchar(exportFileName)) write.csv2(exportFrame,file=exportFileName)
   }
-  cropName <- function(z) ifelse(grepl("Unknown",z <- sub("ixed","",z)),"U",z)
+  cropName <- function(z){
+    z <- paste(substr(z,1,1),substr(z,nchar(z),nchar(z)),sep="")
+    if(substr(z,1,1)=="U") z <- "U"
+    z
+  }
   ### TAB 2: DATA ###  
   TAB2 <- function(){
     tkdestroy(frame2)
@@ -930,7 +893,7 @@ mixsep <- function(){
                     tklistbox(combFrame,height=altboxHeight,selectmode="single",
                               background="white",width=altboxWidth,exportselection="false",yscrollcommand=function(...)tkset(SCR[[25]],...)))
       ##
-      for(i in 1:nloci){ ## Max 25 loci due to hard code above (does not work if created using for-loop)
+      for(i in 1:nloci){ ## Max 25 loci due to hard code in LOCISCR.R (does not work if created using for-loop)
         locusHead <- tclVar("")
         if(!is.null(result$bm)){
           row1 <- dimnames(result$profiles)[[1]]
@@ -954,12 +917,10 @@ mixsep <- function(){
           if(is.null(result$bm)){
             tmpSelcomb <- tklabel(combFrame,text=paste(res.prof[i]),font=font9it)
             tmpSelRadio <- tkradiobutton(combFrame,variable=paste(tclvalue(dataid),loci[i],sep=":"),value="0")
-            tcl("set",paste(tclvalue(dataid),loci[i],sep=":"),"0")
           }
           else{
             tmpSelcomb <- tklabel(combFrame,text=paste(res.prof[i]),font=font9)
             tmpSelRadio <- tkradiobutton(combFrame,variable=paste(tclvalue(dataid),loci[i],sep=":"),value="0")
-            tcl("set",paste(tclvalue(dataid),loci[i],sep=":"),"0")
           }
           tkgrid(tmpSelRadio,column=colid[i],row=rowid[i],sticky="w")
           tkgrid(tmpSelcomb,column=colid[i]+1,row=rowid[i],sticky="w")
@@ -970,7 +931,6 @@ mixsep <- function(){
           if(is.null(result$bm)) tmpSelcomb <- tklabel(combFrame,text=paste(res.prof[i]),font=font9it)
           else tmpSelcomb <- tklabel(combFrame,text=paste(res.prof[i]),font=font9)
           tmpSelRadio <- tkradiobutton(combFrame,variable=paste(tclvalue(dataid),loci[i],sep=":"),value="0")
-          tcl("set",paste(tclvalue(dataid),loci[i],sep=":"),"0")
         }
         tkgrid(tmpSelRadio,column=colid[i],row=rowid[i],sticky="w")
         tkgrid(tmpSelcomb,column=colid[i]+1,row=rowid[i],sticky="w")
@@ -1014,30 +974,22 @@ mixsep <- function(){
         tkconfigure(printAlpha2,textvariable=estAlpha2)
         printTau <- tklabel(estFrame,text="")
         tkconfigure(printTau,textvariable=estTau)
-        printR2 <- tklabel(estFrame,text="")
-        tkconfigure(printR2,textvariable=estR2)
         tkgrid(tklabel(estFrame,text="Estimated alpha 1:"),column=0,row=1,sticky="e")
         tkgrid(tklabel(estFrame,text="Estimated alpha 2:"),column=0,row=2,sticky="e")
         tkgrid(tklabel(estFrame,text="Estimated tau:"),column=0,row=3,sticky="e")
-        tkgrid(tklabel(estFrame,text="Derived R^2:"),column=0,row=4,sticky="e")
         tkgrid(printAlpha1,sticky="e",column=1,row=1)
         tkgrid(printAlpha2,sticky="e",column=1,row=2)
         tkgrid(printTau,sticky="e",column=1,row=3)
-        tkgrid(printR2,sticky="e",column=1,row=4)
       }
       else{
         printAlpha1 <- tklabel(estFrame,text="")
         tkconfigure(printAlpha1,textvariable=estAlpha)
         printTau <- tklabel(estFrame,text="")
         tkconfigure(printTau,textvariable=estTau)
-        printR2 <- tklabel(estFrame,text="")
-        tkconfigure(printR2,textvariable=estR2)
         tkgrid(tklabel(estFrame,text="Estimated alpha:"),column=0,row=1,sticky="e")
         tkgrid(tklabel(estFrame,text="Estimated tau:"),column=0,row=2,sticky="e")
-        tkgrid(tklabel(estFrame,text="Derived R^2:"),column=0,row=3,sticky="e")
         tkgrid(printAlpha1,sticky="e",column=1,row=1)
         tkgrid(printTau,sticky="e",column=1,row=2)
-        tkgrid(printR2,sticky="e",column=1,row=3)
       }
       if(!is.null(result$bm)){
         if(length(result$stats)==3){
@@ -1045,42 +997,33 @@ mixsep <- function(){
           tkgrid(tklabel(estFrame,text=paste(result$stats[["alpha1"]]),font=font9it),sticky="e",column=2,row=1)
           tkgrid(tklabel(estFrame,text=paste(result$stats[["alpha2"]]),font=font9it),sticky="e",column=2,row=2)
           tkgrid(tklabel(estFrame,text=paste(result$stats[["tau"]]),font=font9it),sticky="e",column=2,row=3)
-          tkgrid(tklabel(estFrame,text=paste(result$R2),font=font9it),sticky="e",column=2,row=4)
           for(k in 1:length(row1p)){
             tkgrid(tklabel(estFrame,text=row1p[k],font=font9itul),column=2+k,row=0,sticky="e")
-            tkgrid(tklabel(estFrame,text=result$bmstats[k,1]),column=2+k,row=1,sticky="e") ## alpha1
-            tkgrid(tklabel(estFrame,text=result$bmstats[k,2]),column=2+k,row=2,sticky="e") ## alpha2
-            tkgrid(tklabel(estFrame,text=result$bmstats[k,3]),column=2+k,row=3,sticky="e") ## tau
-            tkgrid(tklabel(estFrame,text=result$bmstats[k,4]),column=2+k,row=4,sticky="e") ## R2
+            tkgrid(tklabel(estFrame,text=result$bmstats[k,1]),column=2+k,row=1,sticky="e")
+            tkgrid(tklabel(estFrame,text=result$bmstats[k,2]),column=2+k,row=2,sticky="e")
+            tkgrid(tklabel(estFrame,text=result$bmstats[k,3]),column=2+k,row=3,sticky="e")
           }
         }
         else{
           tkgrid(tklabel(estFrame,text=row1,font=font9itul),column=2,row=0,sticky="e")
           tkgrid(tklabel(estFrame,text=paste(result$stats[["alpha"]]),font=font9it),sticky="e",column=2,row=1)
           tkgrid(tklabel(estFrame,text=paste(result$stats[["tau"]]),font=font9it),sticky="e",column=2,row=2)
-          tkgrid(tklabel(estFrame,text=paste(result$R2),font=font9it),sticky="e",column=2,row=3)
           for(k in 1:length(row1p)){
             tkgrid(tklabel(estFrame,text=row1p[k],font=font9itul),column=2+k,row=0,sticky="e")
-            tkgrid(tklabel(estFrame,text=result$bmstats[k,1]),column=2+k,row=1,sticky="e") ## alpha
-            tkgrid(tklabel(estFrame,text=result$bmstats[k,2]),column=2+k,row=2,sticky="e") ## tau
-            tkgrid(tklabel(estFrame,text=result$bmstats[k,3]),column=2+k,row=3,sticky="e") ## R2
+            tkgrid(tklabel(estFrame,text=result$bmstats[k,1]),column=2+k,row=1,sticky="e")
+            tkgrid(tklabel(estFrame,text=result$bmstats[k,2]),column=2+k,row=2,sticky="e")
           }
         }
       }
       else{
-        bmlink <- tklabel(estFrame,text="Best match",font=font9itul)
-        setBM <- function(){
-          for(l in 1:length(loci)) tcl("set",paste(tclvalue(dataid),loci[l],sep=":"),"0")
-        }
-        tkbind(bmlink,"<Button-1>",setBM)
         if(length(result$stats)==3){
-          tkgrid(bmlink,column=2,row=0,sticky="e")
+          tkgrid(tklabel(estFrame,text="Best match",font=font9itul),column=2,row=0,sticky="e")
           tkgrid(tklabel(estFrame,text=paste(result$stats[["alpha1"]]),font=font9it),sticky="e",column=2,row=1)
           tkgrid(tklabel(estFrame,text=paste(result$stats[["alpha2"]]),font=font9it),sticky="e",column=2,row=2)
           tkgrid(tklabel(estFrame,text=paste(result$stats[["tau"]]),font=font9it),sticky="e",column=2,row=3)
         }
         else{
-          tkgrid(bmlink,column=2,row=0,sticky="e")
+          tkgrid(tklabel(estFrame,text="Best match",font=font9itul),column=2,row=0,sticky="e")
           tkgrid(tklabel(estFrame,text=paste(result$stats[["alpha"]]),font=font9it),sticky="e",column=2,row=1)
           tkgrid(tklabel(estFrame,text=paste(result$stats[["tau"]]),font=font9it),sticky="e",column=2,row=2)
         }
@@ -1091,7 +1034,7 @@ mixsep <- function(){
       tkgrid(tklabel(resFrame,text=""))
       tkgrid(tkcheckbutton(resFrame,text="Open plot in new plot window",variable=newPlot))
       tkgrid(tkcheckbutton(resFrame,text="Add profile table to plot",variable=addProfile))
-      plotButton <- tkbutton(resFrame,text="Plot selected profiles",command=function()plotEpg(plot=TRUE),default="active")
+      plotButton <- tkbutton(resFrame,text="Plot selected profiles",command=plotEpg,default="active")
       tkgrid(plotButton,sticky="s")
       tkgrid(tklabel(resFrame,text=""))
       exportButton <- tkbutton(resFrame,text="Export result",command=exportResult)
@@ -1132,7 +1075,6 @@ mixsep <- function(){
   pars <- tclVar("")
   res <- tclVar("")
   estTau <- tclVar("")
-  estR2 <- tclVar("")
   estAlpha <- tclVar("")
   estAlpha2 <- tclVar("")
   altp <- tclVar(0.001)
@@ -1144,7 +1086,6 @@ mixsep <- function(){
   known2Set <- tclVar(0)
   known3Set <- tclVar(0)
   plotselect <- tclVar("")
-  selectedProf <- tclVar("")
   newPlot <- tclVar(0)
   addProfile <- tclVar(0) 
   queryRadio <- tclVar("")
@@ -1154,7 +1095,7 @@ mixsep <- function(){
   DBsamples <- "" ## global variable used in DB selection
   LOCI <- list()
   SCR <- list()
-  tkwm.title(msmain, paste("Forensic Genetics DNA Mixture Separator - Version ",tclvalue(version),sep=""))
+  tkwm.title(msmain, "Forensic Genetics DNA Mixture Separator - Version 0.1")
   tabwin <- tk2notebook(msmain, tabs = c("Files", "Data", "Parameters and known profiles", "Results"))
   tkpack(tabwin, fill = "both", expand = 1)
   tab1 <- tk2notetab(tabwin, "Files")
@@ -1176,7 +1117,7 @@ mixsep <- function(){
   tkgrid(frame4)
   
 ### TAB 1: FILES ###
-  tkgrid(tklabel(tab1,text=paste("      Forensic Genetics DNA Mixture Separator - Version ",tclvalue(version),"      ",sep=""),font=font14bf),sticky="n",columnspan=1)
+  tkgrid(tklabel(tab1,text="      Forensic Genetics DNA Mixture Separator - Version 0.1      ",font=font14bf),sticky="n",columnspan=1)
   tkgrid(tklabel(tab1,text="Available files:\n",font=font9bf),sticky="n",columnspan=1)
   filesFrame <- tkframe(tab1)
   scr <- tkscrollbar(filesFrame, repeatinterval=21, command=function(...)tkyview(caselist,...))

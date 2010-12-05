@@ -5,11 +5,7 @@
 \concept{Forensic Genetics}
 \title{Make Desktop shortcut on Windows operating system}
 \description{
-  Creates a shortcut on the desktop - Windows only. If the arguments are
-  used the function enables the connection to a database (dbfile) and
-  copies the sample-file 'wang.csv' to the desktop
-  (wang2desktop). Please see below (and details) for description of
-  using RODBC to connect to a database.
+  Creates a shortcut on the desktop - Windows only.
 }
 \usage{makeShortcut(dbfile="",wang2desktop=FALSE)}
 \arguments{
@@ -30,17 +26,6 @@
     is copied to the Windows desktop. Default is FALSE which only
     creates a shortcut for lauching the mixture separator.}
 }
-\details{
-  The package RODBC enables R to connect to a ODBC-connection. ODBC
-  connections can either be connections to data files (e.g. Access- or
-  Excel-files) or it can be a proper database. The mixsep() GUI connects
-  to the ODBC source using the odbcDriverConnect-function, which takes
-  different arguments depending on the data source. It is recommended to
-  verify that the 'db'-argument provided in the 'dbfile'-file enables the
-  connection to the database prior to using makeShortcut. Please refer
-  to the help pages of the RODBC-package for further details.
-}
-\seealso{odbcDriverConnect}
 \value{
   Creates a shortcut on the desktop. The function identifies the
   location of the mixsep-package in the file system and adds a

@@ -97,7 +97,7 @@ plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,...){
   }
 }
 
-computeExpArea <- function(x,y,tauhat){
+computeExpArea <- function(x,y){
   alts <- apply(x$result$profiles,2,paste,collapse="/")
   alts <- rbind(alts,x$result$alternatives)
   comb <- diag(alts[as.numeric(y)+1,1:length(y)])
@@ -114,14 +114,10 @@ computeExpArea <- function(x,y,tauhat){
   data <- x$result$data #[,datacols]
   names(data) <- c("locus","allele","height","area")
   d <- merge(data,comb,by=c("locus","allele"))
-  ds <- split(d,d$locus)
-  m <- ncol(comb)-2
-  N <- nrow(data)-length(ds)-(m-1)
-  aa <- ahat(ds,m=m)
-  tt <- that(ds,alpha=aa,m=m)
-  R2 <- tauhat/tt
-  r2 <- (tauhat/tt)^N
-  expArea <- expectedAreas(split(d,d$locus),alpha=aa,m=m)
-  list(data=expArea[,c("locus","allele",paste("P",1:m,sep=""),"exp")],alpha=aa,tau=tt,R2=R2,r2=r2,N=N)
+  aa <- ahat(split(d,d$locus),m=ncol(comb)-2)
+  tt <- that(split(d,d$locus),alpha=aa,m=ncol(comb)-2)
+  expArea <- expectedAreas(split(d,d$locus),alpha=aa,m=ncol(comb)-2)
+  list(data=expArea[,c("locus","allele",paste("P",1:(ncol(comb)-2),sep=""),"exp")],
+       alpha=aa,tau=tt)
 }
 

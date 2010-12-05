@@ -1,5 +1,5 @@
 makeShortcut <- function(dbfile="",wang2desktop=FALSE){
-  if(grepl("win",tolower(.Platform$OS.type))){ ## Windows
+#  if(grepl("win",tolower(.Platform$OS.type))){ ## Windows
     mixsepdir <- .find.package("mixsep")
     ## Create runmixsep.R script
     if(dbfile!=""){ ## If a file of DB connector information is given:
@@ -17,15 +17,29 @@ makeShortcut <- function(dbfile="",wang2desktop=FALSE){
         cat(" library(mixsep)\n mixsep()",file=paste(mixsepdir,"R","runmixsep.R",sep=.Platform$file.sep))
       }
       else{
-        ## Writes information to runmixsep.R
-        dbcols <- grepl("dbcols",dblines)
-        dbcol <- unlist(lapply(strsplit(dblines[dbcols],"="),function(x) x[2]))
-        dbcol <- gsub("^\\s+|\\s+$","",unlist(strsplit(gsub("\"", "", dbcol),";")))
-        dblines[dbcols] <- paste("dbcols = c(\"",paste(gsub("^\\s+|\\s+$","",unlist(strsplit(gsub("\"", "", dbcol),";"))),collapse="\",\"",sep=""),"\")",sep="",collapse="")
-        cat(" library(mixsep)\n options(mixsep=list(",paste(dblines,collapse=","),"))\n mixsep()",file=paste(mixsepdir,"R","runmixsep.R",sep=.Platform$file.sep))
+        ## Locates the line with 'db'-connection information
+        dbconnect <- rep(0,4)
+        for(line in c("dbtab","dbcase","dbcols")) dbconnect <- dbconnect + grepl(line,dblines)
+        dbconnect <- dblines[!dbconnect]
+        browser()
+#        dbAttempt <- try(odbcDriverConnect(dbconnect),silent=TRUE)
+#        if(class(dbAttempt)=="RODBC"){
+#          tkmessageBox(title="Database connection successful",message="Database connection successfully established",icon="info")
+          ## Writes information to runmixsep.R
+          dbcols <- grepl("dbcols",dblines)
+          dbcol <- unlist(lapply(strsplit(dblines[dbcols],"="),function(x) x[2]))
+          dbcol <- gsub("^\\s+|\\s+$","",unlist(strsplit(gsub("\"", "", dbcol),";")))
+          dblines[dbcols] <- paste("dbcols = c(\"",paste(gsub("^\\s+|\\s+$","",unlist(strsplit(gsub("\"", "", dbcol),";"))),collapse="\",\"",sep=""),"\")",sep="",collapse="")
+          cat(" library(mixsep)\n options(mixsep=list(",paste(dblines,collapse=","),"))\n mixsep()",file=paste(mixsepdir,"R","runmixsep.R",sep=.Platform$file.sep))
+#        }
+#        else{
+#          ## DB connection failed - This disables [DB] in GUI
+#          tkmessageBox(title="Database connection refused",message="Connection to the database refused",icon="error")
+#          cat(" library(mixsep)\n mixsep()",file=paste(mixsepdir,"R","runmixsep.R",sep=.Platform$file.sep))
+#        }
+ #       odbcClose(dbAttempt)
       }
-    }
-    ## If no DB connector is supplied - This disables [DB] in GUI
+    } ## If no DB connector is supplied - This disables [DB] in GUI
     else cat(" library(mixsep)\n mixsep()",file=paste(mixsepdir,"R","runmixsep.R",sep=.Platform$file.sep))
     ## Create .bat-file:
     cat(paste(' @echo off \n start /MIN ', paste(R.home(),"bin","Rterm.exe",sep=.Platform$file.sep), ' -q -f ',
@@ -48,10 +62,10 @@ makeShortcut <- function(dbfile="",wang2desktop=FALSE){
       filesys.CopyFile \"',wangfile,'\", strDesktopFld + "',.Platform$file.sep,'", true \n
       End If',sep=""), file=paste(mixsepdir,"R","shortcut.vbs",sep=.Platform$file.sep), append=TRUE)
     }
-    ## Create shortcut and/or copy wang.csv to desktop by calling VB script:
+    ## Create shortcut by calling VB script:
     shell(paste("CSCRIPT",paste(mixsepdir,"R","shortcut.vbs",sep=.Platform$file.sep)))
     ## Remove VB script:
     file.remove(paste(mixsepdir,"R","shortcut.vbs",sep=.Platform$file.sep))
-  }
-  else stop("Creation of shortcut is only possible for Windows operating systems")
+#  }
+#  else stop("Creation of shortcut is only possible for Windows operating systems")
 }
