@@ -9,10 +9,16 @@
 ## The data is stored in a comma separated spread sheet file (.csv).
 ## The location of the file is returned by running the code below:
 ## cat(paste(.find.package("mixsep"),"data",sep=.Platform$file.sep))
+## It can be copied to the desktop by makeShortcut(wang2desktop=TRUE)
 }
 \format{A spread sheet with three columns: Locus, Allele and Area.}
 \references{
  T Wang, N Xue and JD Birdwell (2006). 'Least-Square Deconvolution: A
  Framework for Interpreting Short Tandem Repeat Mixtures'. Journal of
  Forensic Science 51 (6): 1284-1297.
+}
+\examples{
+  \dontrun{
+  makeShortcut(TRUE) ## copies wang.csv to the desktop
+  }
 }
