@@ -14,7 +14,7 @@
   profiles.
 
   See also http://people.math.aau.dk/~tvede/mixsep/ for further details
-  and descriptive screen shots. 
+  and guides with screen shots. 
 }
 \usage{mixsep()}
 \value{
