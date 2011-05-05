@@ -4,7 +4,7 @@ library(MASS)
 library(RODBC)
 
 mixsep <- function(){
-  version <- tclVar("0.1-3")
+  version <- tclVar("0.1-4")
   killR <- tclVar("")
   font14bf <- tkfont.create(family = "helvetica", size = 14, weight = "bold")
   font9bf <- tkfont.create(family = "helvetica", size = 9, weight = "bold")
@@ -214,6 +214,10 @@ mixsep <- function(){
     tkselection.set(caselist,0)
   }
   removeFile <- function(){
+    if(!exists("mixsep.data",envir=.GlobalEnv)){
+      tkmessageBox(title="No files exists",message="No files exists",icon="error",type="ok")
+      return(NULL)
+    }
     cases <- names(get("mixsep.data",envir=.GlobalEnv))
     caseSelection <- as.numeric(tkcurselection(caselist))+1
     caseChoice <- cases[caseSelection]
@@ -235,6 +239,9 @@ mixsep <- function(){
           tclvalue(alleleCol) <<- ""
           tclvalue(heightCol) <<- ""
           tclvalue(areaCol) <<- ""
+          tclvalue(bpCol) <<- ""
+          tclvalue(dyeCol) <<- ""
+          tclvalue(kit) <<- ""
           tclvalue(rowsSelected) <<- ""
           tclvalue(pars) <<- ""
           tclvalue(res) <<- ""
@@ -286,6 +293,9 @@ mixsep <- function(){
           tclvalue(alleleCol) <<- ""
           tclvalue(heightCol) <<- ""
           tclvalue(areaCol) <<- ""
+          tclvalue(bpCol) <<- ""
+          tclvalue(dyeCol) <<- ""
+          tclvalue(kit) <<- ""
           tclvalue(rowsSelected) <<- ""
           tclvalue(pars) <<- ""
           tclvalue(res) <<- ""
@@ -324,6 +334,9 @@ mixsep <- function(){
     tclvalue(alleleCol) <<- ""
     tclvalue(heightCol) <<- ""
     tclvalue(areaCol) <<- ""
+    tclvalue(bpCol) <<- ""
+    tclvalue(dyeCol) <<- ""
+    tclvalue(kit) <<- ""
     tclvalue(rowsSelected) <<- ""
     tclvalue(pars) <<- ""
     tclvalue(res) <<- ""
@@ -354,7 +367,14 @@ mixsep <- function(){
     locus <- as.numeric(paste(tclvalue(locusCol)))
     allele <- as.numeric(paste(tclvalue(alleleCol)))
     height <- as.numeric(paste(tclvalue(heightCol)))
-    area <- as.numeric(paste(tclvalue(areaCol)))    
+    area <- as.numeric(paste(tclvalue(areaCol)))
+    bp <- as.numeric(paste(tclvalue(bpCol)))
+    dye <- as.numeric(paste(tclvalue(dyeCol)))
+    datacols <- (datacols <- c(locus,allele,height,area,bp,dye))[datacols!=0]
+    if(length(unique(datacols))!=length(datacols)){
+      tkmessageBox(title="Error",message="A column is selected twice for two different rows!",icon="error",type="ok")
+      return(NULL)      
+    }
     if(all(is.na(c(height,area))) | all(c(height,area)<1)){
       tkmessageBox(title="Area and height missing",message="At least one column containing peak height or area need to be speficified",icon="error",type="ok")
       return(NULL)
@@ -380,10 +400,21 @@ mixsep <- function(){
       return(NULL)
     }
     else{
-      data <- data[,c(locus,allele,height,area)]
-      names(data) <- c("locus","allele","height","area")
+      data <- data[,c(locus,allele,height,area,bp,dye)]      
+      names(data) <- c("locus","allele","height","area","bp","dye")[c(rep(TRUE,4),bp!=0,dye!=0)]
       data <- convertTab(data)
-      data <- convertTab(data,mode="num",subset=c("height","area"))
+      if(bp==0 | dye==0){ ## use value from 'kit' to assign bp and dye info
+        data <- data[,c("locus","allele","height","area")] ## removes bp or dye if just one of the is set
+        if(tclvalue(kit)==""){
+          tkmessageBox(title="Missing kit specification",message="When bp and/or dye are unset a kit must be specified",icon="error",type="ok")
+          return(NULL)
+        }
+        data <- addBpDye(data,kit=tclvalue(kit)) ## addBpDye in plot.R       
+      }
+      ## names(data) <- c("locus","allele","height","area","bp","dye")
+      data <- convertTab(convertTab(data),mode="num",subset=c("height","area","bp"))
+      data$dye <- toupper(strtrim(gsub("[0-9]","",data$dye),1))
+      data <- data[order(factor(data$dye,levels=c("B","G","Y","R","O")),data$bp),] ## Blue > Green > Yellow > Red > Orange
       msdata[[tclvalue(dataid)]]$result <- list(fulldata=data,data=data)
       assign("mixsep.data",msdata,env=.GlobalEnv)
     }
@@ -413,6 +444,9 @@ mixsep <- function(){
     tclvalue(alleleCol) <- ""
     tclvalue(heightCol) <- ""
     tclvalue(areaCol) <- ""
+    tclvalue(bpCol) <- ""
+    tclvalue(dyeCol) <- ""
+    tclvalue(kit) <- ""
     TAB2()
     TAB3()
     TAB4()
@@ -422,9 +456,15 @@ mixsep <- function(){
     tcl("update","idletasks")
     msdata <- get("mixsep.data",envir=.GlobalEnv)
     data <- msdata[[paste(tclvalue(dataid))]]$result$data
-    names(data) <- c("locus","allele","height","area")
+    names(data) <- c("locus","allele","height","area","bp","dye") ## was without "bp" and "dye"
     data <- convertTab(data)
     m <- as.numeric(tclvalue(noContrib))
+    if(m>3){
+      tkconfigure(msmain,cursor="arrow")
+      tcl("update","idletasks")
+      tkmessageBox(message="Too many observed alleles at one or more loci for analysis!\nOnly two- and three-person mixtures implemented (i.e. max of 6 alleles per locus)",icon="error",type="ok")
+      return(NULL)
+    }
     locusorder <- unique(paste(data$locus))
     ## REGARDING SUSPECTS:
     if(any(fProfs <- (1:3)[c(tclvalue(known1Set)=="1",tclvalue(known2Set)=="1",tclvalue(known3Set)=="1")])){
@@ -471,7 +511,7 @@ mixsep <- function(){
       res <- mixturesep(x=data,m=m,trace=FALSE,dropLocus=(paste(tclvalue(dropLoci))=="1"),alternatives=(paste(tclvalue(searchalt))=="1"),
                         p=as.numeric(paste(tclvalue(altp))),fixedProfiles=knownProfile,recur=TRUE,gui=TRUE)
     }
-    ##    
+    ##
     else res <- mixturesep(x=data,m=m,trace=FALSE,dropLocus=(paste(tclvalue(dropLoci))=="1"),
                            alternatives=(paste(tclvalue(searchalt))=="1"),
                            p=as.numeric(paste(tclvalue(altp))),gui=TRUE)
@@ -629,56 +669,106 @@ mixsep <- function(){
       msdata <- get("mixsep.data",envir=.GlobalEnv)
       data <- msdata[[tclvalue(dataid)]]$data
       nc <- ncol(data)
+      colFrame <- tkframe(frame2)
       tclvalue(header) <- paste("Analysis of case:",tclvalue(dataid))
-      tkgrid(tklabel(frame2,text=paste(tclvalue(header)),font=font9bf),columnspan=nc+2)
-      tkgrid(tklabel(frame2,text="Data preview (select columns with the indicated data):"),columnspan=nc+2)
-      tkgrid(tklabel(frame2,text="Locus"),column=0,row=2,sticky="w")
-      resetLocus <- tklabel(frame2,text="[RESET]",font=font7,foreground="blue")
+      tkgrid(tklabel(colFrame,text=paste(tclvalue(header)),font=font9bf),columnspan=nc+2)
+      tkgrid(tklabel(colFrame,text="Data preview (select columns with the indicated data):"),columnspan=nc+2)
+      tkgrid(tklabel(colFrame,text="Locus"),column=0,row=2,sticky="w")
+      resetLocus <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
       tkgrid(resetLocus,column=1,row=2,sticky="w")
       tkbind(resetLocus,"<Button-1>",function()tcl("set",locusCol,"0"))
-      tkgrid(tklabel(frame2,text="Allele"),column=0,row=3,sticky="w")
-      resetAllele <- tklabel(frame2,text="[RESET]",font=font7,foreground="blue")
+      tkgrid(tklabel(colFrame,text="Allele"),column=0,row=3,sticky="w")
+      resetAllele <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
       tkgrid(resetAllele,column=1,row=3,sticky="w")
       tkbind(resetAllele,"<Button-1>",function()tcl("set",alleleCol,"0"))
-      tkgrid(tklabel(frame2,text="Height"),column=0,row=4,sticky="w")
-      resetHeight <- tklabel(frame2,text="[RESET]",font=font7,foreground="blue")
+      tkgrid(tklabel(colFrame,text="Height"),column=0,row=4,sticky="w")
+      resetHeight <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
       tkgrid(resetHeight,column=1,row=4,sticky="w")
       tkbind(resetHeight,"<Button-1>",function()tcl("set",heightCol,"0"))
-      tkgrid(tklabel(frame2,text="Area"),column=0,row=5,sticky="w")
-      resetArea <- tklabel(frame2,text="[RESET]",font=font7,foreground="blue")
+      tkgrid(tklabel(colFrame,text="Area"),column=0,row=5,sticky="w")
+      resetArea <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
       tkgrid(resetArea,column=1,row=5,sticky="w")
       tkbind(resetArea,"<Button-1>",function()tcl("set",areaCol,"0"))
+      tkgrid(tklabel(colFrame,text="bp"),column=0,row=6,sticky="w")
+      resetBP <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
+      tkgrid(resetBP,column=1,row=6,sticky="w")
+      tkbind(resetBP,"<Button-1>",function()tcl("set",bpCol,"0"))
+      tkgrid(tklabel(colFrame,text="Dye"),column=0,row=7,sticky="w")
+      resetDye <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
+      tkgrid(resetDye,column=1,row=7,sticky="w")
+      tkbind(resetDye,"<Button-1>",function()tcl("set",dyeCol,"0"))
       tclvalue(locusCol) <<- unlist(lapply(c("marker","Marker","locus","Locus","system","sys","DnaSystem"),grep,names(data)))[1]
       tclvalue(alleleCol) <<- unlist(lapply(c("type","Type","allele","Allele","Top_Allel_type"),grep,names(data)))[1]
       tclvalue(heightCol) <<- unlist(lapply(c("height","Height","hojde","Hojde","Top_Hoejde","hoejde"),grep,names(data)))[1]
       tclvalue(areaCol) <<- unlist(lapply(c("area","Area","areal","Areal","Top_Areal"),grep,names(data)))[1]
+      tclvalue(bpCol) <<- unlist(lapply(c("bp","Bp","BP","fragment","Fragment","Top_BP"),grep,names(data)))[1]
+      tclvalue(dyeCol) <<- unlist(lapply(c("dye","Dye","color","Color","farve","Farve"),grep,names(data)))[1]
       if(as.numeric(tclvalue(locusCol))<0) tclvalue(locusCol) <<- ""
       if(as.numeric(tclvalue(alleleCol))<0) tclvalue(alleleCol) <<- ""
       if(as.numeric(tclvalue(heightCol))<0) tclvalue(heightCol) <<- ""
       if(as.numeric(tclvalue(areaCol))<0) tclvalue(areaCol) <<- ""
+      if(as.numeric(tclvalue(bpCol))<0) tclvalue(bpCol) <<- ""
+      if(as.numeric(tclvalue(dyeCol))<0) tclvalue(dyeCol) <<- ""
       ## Check whether the auto-selected 'height' and 'area' columns contain zero or NA-observations
       if(!(paste(tclvalue(heightCol))=="" | paste(tclvalue(heightCol))=="0")){
         if(is.element("0",paste(data[,as.numeric(paste(tclvalue(heightCol)))]))) tclvalue(heightCol) <- ""
+        else if(any(is.na(paste(data[,as.numeric(paste(tclvalue(heightCol)))])))) tclvalue(heightCol) <- ""
       }
       if(!(paste(tclvalue(areaCol))=="" | paste(tclvalue(areaCol))=="0")){
         if(is.element("0",paste(data[,as.numeric(paste(tclvalue(areaCol)))]))) tclvalue(areaCol) <- ""
+        else if(any(is.na(paste(data[,as.numeric(paste(tclvalue(areaCol)))])))) tclvalue(areaCol) <- ""
       }
       for(i in 1:nc){
-        tkgrid(tkradiobutton(frame2,variable=locusCol,value=paste(i)),column=i+1,row=2)
-        tkgrid(tkradiobutton(frame2,variable=alleleCol,value=paste(i)),column=i+1,row=3)
-        tkgrid(tkradiobutton(frame2,variable=heightCol,value=paste(i)),column=i+1,row=4)
+        tkgrid(tkradiobutton(colFrame,variable=locusCol,value=paste(i)),column=i+1,row=2)
+        tkgrid(tkradiobutton(colFrame,variable=alleleCol,value=paste(i)),column=i+1,row=3)
+        tkgrid(tkradiobutton(colFrame,variable=heightCol,value=paste(i)),column=i+1,row=4)
         if(tclvalue(heightCol)=="") tcl("set",heightCol,"0")
-        tkgrid(tkradiobutton(frame2,variable=areaCol,value=paste(i)),column=i+1,row=5)
+        tkgrid(tkradiobutton(colFrame,variable=areaCol,value=paste(i)),column=i+1,row=5)
         if(tclvalue(areaCol)=="") tcl("set",areaCol,"0")
-        tkgrid(tklabel(frame2,text=names(data)[i],font=font9bf),column=i+1,row=6)
-        for(j in 1:4) tkgrid(tklabel(frame2,text=paste(data[j,i])),column=i+1,row=6+j)
+        tkgrid(tkradiobutton(colFrame,variable=bpCol,value=paste(i)),column=i+1,row=6)
+        if(tclvalue(bpCol)=="") tcl("set",bpCol,"0")
+        tkgrid(tkradiobutton(colFrame,variable=dyeCol,value=paste(i)),column=i+1,row=7)
+        if(tclvalue(dyeCol)=="") tcl("set",dyeCol,"0")
+        tkgrid(tklabel(colFrame,text=names(data)[i],font=font9bf),column=i+1,row=8)
+        for(j in 1:4) tkgrid(tklabel(colFrame,text=paste(data[j,i])),column=i+1,row=8+j)
       }
-      tkgrid(tklabel(frame2,text=""))
-      selCols <- tkbutton(frame2,text="Select columns",command=colSelected,default="active")
-      tkgrid(selCols,columnspan=nc+1)
-      tkgrid(tklabel(frame2,text="\nIf only height or area information is available leave the missing column blank above",foreground="red",font=font8),columnspan=nc+1,sticky="w")
+      tkgrid(tklabel(colFrame,text=""))
+      tkgrid(tklabel(colFrame,text="\nIf only height or area information is available leave the missing column blank above",
+                     foreground="red",font=font8),columnspan=nc+1,sticky="w")
+      tkgrid(tklabel(colFrame,text=""))
+      tkgrid(colFrame)
+
+      kitFrame <- tkframe(frame2)
+      kitHead <- tkframe(kitFrame)
+      tkgrid(tklabel(kitHead,text="If information about basepair (bp) and fluorescent dye are missing please select the appropriate kit from the list below"),
+             columnspan=3,sticky="w",row=0)
+      tkgrid(kitHead)
+      kitSelect <- tkframe(kitFrame)
+      tkgrid(tklabel(kitSelect,text="Applied Biosystems",font=font9bf),sticky="w",column=0,row=1)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="ID",text="Identifiler"),sticky="w",column=0,row=2)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Mini",text="MiniFiler"),sticky="w",column=0,row=3)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="NGM",text="NGM (SElect)"),sticky="w",column=0,row=4)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Plus",text="Profiler Plus"),sticky="w",column=0,row=5)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="COfiler",text="COfiler"),sticky="w",column=0,row=6)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="SGM",text="SGM Plus"),sticky="w",column=0,row=7)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="SE",text="SEfiler"),sticky="w",column=0,row=8)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Profiler",text="Profiler"),sticky="w",column=0,row=9)
+#      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Y",text="Yfiler"))
+      tkgrid(tklabel(kitSelect,text="    ",font=font9bf),sticky="w",column=1,row=1)
+      tkgrid(tklabel(kitSelect,text="Promega",font=font9bf),sticky="w",column=2,row=1)
+      tkgrid(tkradiobutton(kitSelect,variable=kit,value="ESI17",text="ESI17"),sticky="w",column=2,row=2)
+#      tkgrid(tkradiobutton(kitSelect,variable=kit,value="pkit1",text="Promega kit 1"),sticky="w",column=2,row=3)
+#      tkgrid(tkradiobutton(kitSelect,variable=kit,value="pkit2",text="Promega kit 2"),sticky="w",column=2,row=4)
+      tkgrid(kitSelect)
+      tkgrid(kitFrame)
+
+      colButtom <- tkframe(frame2)
+      selCols <- tkbutton(colButtom,text="Select columns (and kit)",command=colSelected,default="active")
+      tkgrid(tklabel(colButtom,text=""))
+      tkgrid(selCols)
       tkfocus(selCols)
-      tkgrid(tklabel(frame2,text=""))
+      tkgrid(tklabel(colButtom,text=""))
+      tkgrid(colButtom)
     }
     else{
       header <- tclVar()
@@ -688,7 +778,7 @@ mixsep <- function(){
       printRow <- 25
       maxRow <- min(nr,printRow)
       nrs <- seq(from=1,to=nr,by=maxRow)
-      if(maxRow<printRow) nrs <- 1 ## if less than or equal to 20 rows in data
+      if(maxRow<printRow) nrs <- 1 ## if less than or equal to 'printRow' (currently 25) rows in data
       srHead <- tkframe(frame2)
       tclvalue(header) <- paste("Analysis of case:",tclvalue(dataid))
       tkgrid(tklabel(srHead,text=paste(tclvalue(header)),font=font9bf))
@@ -696,19 +786,21 @@ mixsep <- function(){
       tkgrid(srHead)
       srMain <- tkframe(frame2)
       for(k in 1:length(nrs)){
-        tkgrid(tklabel(srMain,text="Select",font=font9bf),column=(k-1)*6+0,row=2)
-        tkgrid(tklabel(srMain,text="Locus",font=font9bf),column=(k-1)*6+1,row=2)
-        tkgrid(tklabel(srMain,text="Allele",font=font9bf),column=(k-1)*6+2,row=2)
-        tkgrid(tklabel(srMain,text="Height",font=font9bf),column=(k-1)*6+3,row=2)
-        tkgrid(tklabel(srMain,text="Area",font=font9bf),column=(k-1)*6+4,row=2)
-        for(i in 1:4){
-          tkgrid(tklabel(srMain,text=names(data)[i],font=font9it),column=(k-1)*6+i,row=3)
+        tkgrid(tklabel(srMain,text="Select",font=font9bf),column=(k-1)*8+0,row=2)
+        tkgrid(tklabel(srMain,text="Locus",font=font9bf),column=(k-1)*8+1,row=2)
+        tkgrid(tklabel(srMain,text="Allele",font=font9bf),column=(k-1)*8+2,row=2)
+        tkgrid(tklabel(srMain,text="Height",font=font9bf),column=(k-1)*8+3,row=2)
+        tkgrid(tklabel(srMain,text="Area",font=font9bf),column=(k-1)*8+4,row=2)
+        tkgrid(tklabel(srMain,text="Bp",font=font9bf),column=(k-1)*8+5,row=2)
+        tkgrid(tklabel(srMain,text="Dye",font=font9bf),column=(k-1)*8+6,row=2)
+        for(i in 1:6){
+          tkgrid(tklabel(srMain,text=names(data)[i],font=font9it),column=(k-1)*8+i,row=3)
           if(k==length(nrs)) maxRow <- nr-nrs[k]+1 ## last 'column' of the data
           for(j in 1:maxRow){
             selectRow <- tkcheckbutton(srMain,variable=paste(tclvalue(dataid),"row",(nrs[k]-1+j),sep=":"))
-            tkgrid(selectRow,column=(k-1)*6+0,row=3+j)
+            tkgrid(selectRow,column=(k-1)*8+0,row=3+j)
             tcl(selectRow,"select")
-            tkgrid(tklabel(srMain,text=paste(data[(nrs[k]-1)+j,i])),column=(k-1)*6+i,row=3+j)
+            tkgrid(tklabel(srMain,text=paste(data[(nrs[k]-1)+j,i])),column=(k-1)*8+i,row=3+j)
           }
         }
       }
@@ -758,7 +850,8 @@ mixsep <- function(){
       m2 <- tkradiobutton(contribFrame,variable=noContrib,value="2",text="2")
       if(maxns<=4) tkgrid(m2,column=2,row=2,sticky="w")
       m3 <- tkradiobutton(contribFrame,variable=noContrib,value="3",text="3")
-      tkgrid(m3,column=3,row=2,sticky="w")
+      if(maxns<=6) tkgrid(m3,column=3,row=2,sticky="w")
+      else noContrib <- 4 ## Too many observed alleles
       tkgrid(tklabel(contribFrame,text="Search for alternatives:"),column=0,row=4,sticky="e")
       altQ <- tklabel(contribFrame,text="[?]",font=font7,foreground="blue")
       tkgrid(altQ,column=1,row=4)
@@ -1133,6 +1226,9 @@ mixsep <- function(){
   alleleCol <- tclVar("")
   heightCol <- tclVar("")
   areaCol <- tclVar("")
+  bpCol <- tclVar("")
+  dyeCol <- tclVar("")
+  kit <- tclVar("")
   rowsSelected <- tclVar("")
   pars <- tclVar("")
   res <- tclVar("")

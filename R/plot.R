@@ -1,59 +1,64 @@
-allele2bp <- function(x,kit="SGM"){
-  x$allele <- paste(x$allele)
-  x$allele[is.element(toupper(paste(x$allele)),c("X"))] <- 1
-  x$allele[is.element(toupper(paste(x$allele)),c("Y"))] <- 3
-  x$allele <- as.numeric(paste(x$allele))
-  x$locus <- toupper(x$locus)
-  offsets <- data.frame(locus=c("CSF","D7","D8","D21","D2","D3","D13","D16","TH0","THO","D18","D19","TPO","VWA","D5","FGA","AME","SE33"),
-                        offset=c(281,231,91,88,247,64,184,232,147,147,234,66,198,111,106,146,92,100), ## x-offset (fixed length for all kits)
-##                        ID=c(rep(580,4),rep(390,5+1),rep(200,4),rep(10,3),NA), ## y-offset (kit dependent via dye lane) 
-                        ID=c(rep(620,4),rep(420,5+1),rep(220,4),rep(20,3),NA), ## y-offset (kit dependent via dye lane) 
-##                        SE=c(NA,NA,390,10,580,580,NA,580,200,200,10,200,NA,580,NA,200,390,390), ## y-offset (kit dependent via dye lane) 
-                        SE=c(NA,NA,420,20,620,620,NA,620,220,220,20,220,NA,620,NA,220,420,420), ## y-offset (kit dependent via dye lane) 
-##                        SGM=c(NA,NA,200,200,390,390,NA,390,10,10,200,10,NA,390,NA,10,200,NA), ## y-offset (kit dependent via dye lane) 
-                        SGM=c(NA,NA,220,220,420,420,NA,420,20,20,220,20,NA,420,NA,20,220,NA), ## y-offset (kit dependent via dye lane) 
-##                        PP=c(NA,10,200,200,NA,390,10,NA,NA,NA,200,NA,NA,390,10,390,200,NA)) ## y-offset (kit dependent via dye lane) 
-                        PP=c(NA,20,220,220,NA,420,20,NA,NA,NA,220,NA,NA,420,20,420,220,NA)) ## y-offset (kit dependent via dye lane) 
-  offsets <- offsets[,c("locus","offset",kit)]
-  names(offsets)[3] <- "baseline"
-  x <- merge(x,offsets,by="locus",all.x=TRUE)
-  x$bp <- (x$offset-110)*4 + 16*round(x$allele)
-  x$bp <- x$bp+40*(x$allele-round(x$allele))
-  x
+addBpDye <- function(x,kit=c("ID","Mini","Plus","COfiler","SGM","SE","Profiler","ESI17")){
+  ## ABI = Applied Biosystems kit; Promega = Promega PowerPlex kit
+  ## locus: Locus designation; offset: bp = offset+4*allele; dye: fluorescent dye/colour [B(lue), G(reen), Y(ellow), R(ed)]
+  ## Offsets were computed based on precision data reported by ABI (online user manuals, www.appliedbiosystems.com)
+  ## Loci implemented: Deselected below by loci[TRUE/FALSE]
+  loci <- c("CSF1PO","D5S818","D7S820","D13S317","TPOX","D3S1358","D8S1179", 
+            "D16S539","D18S51","D21S11","FGA","TH01","VWA","D2S1338","D19S433", ## Note: vWA is designated VWA
+            "D1S1656","D2S441","D10S1248","D12S391","D22S1045","SE33","AMEL")
+  kit <- kit[1]
+  kits <- list("ID"=data.frame(locus=loci[c(rep(T,15),rep(F,6),T)], ## Identifiler, Plus & Direct (ABI)
+                 offset=c(280,105,231,184,198,63,90,232,234,88,146,146,110,246,65,106), ## Amel-bp is for X, Y=X+6
+                 dye=c("B","R","B","G","Y","G","B","G","Y","B","R","G","Y","G","Y","R")), 
+               "Mini"=data.frame(locus=loci[c(T,F,T,T,F,F,F,T,T,T,T,F,F,T,rep(F,7),T)], ## MiniFiler (ABI)
+                 offset=c(62,125,71,55,96,91,82,60,101),
+                 dye=c("R","B","B","Y","Y","G","R","G","G")),
+               "NGM"=data.frame(locus=loci[c(rep(F,5),rep(T,17))], ## NGM and NGMSElect (ABI)
+                 offset=c(85,90,207,233,87,164,163,107,228,90,137,42,43,172,58,293,100),
+                 dye=c("R","G","B","G","G","Y","Y","B","B","Y","R","R","B","R","Y","R","G")),
+               "Plus"=data.frame(locus=loci[c(F,T,T,T,F,T,T,F,T,T,T,F,T,rep(F,8),T)], ## Profiler Plus & ID (ABI)
+                 offset=c(103,232,173,63,91,234,89,144,110,103),
+                 dye=c("Y","Y","Y","B","G","G","G","B","B","G")),
+               "COfiler"=data.frame(locus=loci[c(T,F,T,F,T,T,F,T,F,F,F,T,rep(F,9),T)], ## Cofiler (ABI)
+                 offset=c(256,232,191,63,209,147,103),
+                 dye=c("G","Y","G","B","B","G","G")),
+               "SGM"=data.frame(locus=loci[c(rep(F,5),rep(T,10),rep(F,6),T)], ## SGM Plus (ABI)
+                 offset=c(63,91,209,234,89,144,147,110,230,66,103),
+                 dye=c("B","G","B","G","G","Y","Y","B","B","Y","G")),
+               "SE"=data.frame(locus=loci[c(rep(F,5),rep(T,10),rep(F,5),T,T)], ## SEfiler (ABI)
+                 offset=c(61,90,207,233,89,142,143,107,228,64,183,102),
+                 dye=c("B","G","B","R","R","Y","Y","B","B","Y","G","G")),
+               "Profiler"=data.frame(locus=loci[c(rep(T,6),rep(F,4),rep(T,3),rep(F,8),T)], ## Profiler (ABI)
+                 offset=c(256,103,232,173,191,63,144,147,110,103),
+                 dye=c("G","Y","Y","Y","G","B","B","G","B","G")),
+               "ESI17"=data.frame(locus=loci[c(rep(F,5),rep(T,17))], ## ESI17 (Promega)
+                 offset=NA,
+                 dye=c("B","R","G","G","Y","R","Y","Y","B","B","G","G","G","Y","B","R","B")))
+  kits <- kits[[kit]]
+  nx <- names(x)
+  x <- merge(x,kits,by="locus")
+  if(any(ame <- grepl("AME",toupper(x$locus)))){
+    xame <- x[ame,] ## Amelogenin data
+    xame <- merge(xame,data.frame(allele=c("X","Y"),bp=rep(xame$offset[1],2)+c(0,6)),by="allele")
+    xame$offset <- NULL
+    x <- x[!ame,] ## Autosomal data
+    x$allele <- as.numeric(paste(x$allele))
+  }
+  else x$allele <- as.numeric(paste(x$allele))
+  x$bp <- x$offset+4*( round(x$allele) + (x$allele-round(x$allele))*2.5 )
+  x$offset <- NULL
+  if(any(ame)) x <- rbind(x,xame)
+  x[order(factor(x$dye,c("B","G","Y","R")),x$bp),]
 }
 
+
 plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,contributor=NULL,...){  
-  ## check which kit is used:
-  CSF <- length(grep("CSF",x$locus))>0
-  SE33 <- length(grep("SE33",x$locus))>0
-  D5 <- length(grep("D5",x$locus))>0
-  D19 <- length(grep("D19",x$locus))>0
-  if(CSF) kit <- "ID"
-  else if(SE33) kit <- "SE"
-  else if(D19 & !SE33) kit <- "SGM"
-  else if(D5 & !CSF) kit <- "PP"
-  else{
-    stop("Plotting for the used kit is not possible")
-    tkmessageBox(message="Plotting for the used kit is not possible",icon="error",type="ok")
-  }
-  kits <- list("ID"=list("B"=c("CSF","D7","D8","D21"),"G"=c("D2","D3","D13","D16","TH0","THO"),"Y"=c("D18","D19","TPO","VWA"),"R"=c("D5","FGA","AME")),
-               "SE"=list("B"=c("D2","D3","D16","VWA"),"G"=c("D8","SE33","AME"),"Y"=c("D19","FGA","TH0","THO"),"R"=c("D18","D21")),
-               "SGM"=list("B"=c("D2","D3","D16","VWA"),"G"=c("D8","D18","D21","AME"),"Y"=c("D19","FGA","TH0","THO")),
-               "PP"=list("B"=c("D3","FGA","VWA"),"G"=c("D8","D18","D21","AME"),"Y"=c("D5","D7","D13")))
-  kits <- kits[[kit]]
-##   DD <- list("ID"=c("R"=10,"Y"=200,"G"=390,"B"=580),"SE"=c("R"=10,"Y"=200,"G"=390,"B"=580),
-##              "SGM"=c("Y"=10,"G"=200,"B"=390),"PP"=c("Y"=10,"G"=200,"B"=390))
-  DD <- list("ID"=c("R"=20,"Y"=220,"G"=420,"B"=620),"SE"=c("R"=20,"Y"=220,"G"=420,"B"=620),
-             "SGM"=c("Y"=20,"G"=220,"B"=420),"PP"=c("Y"=20,"G"=220,"B"=420))
-  DD <- DD[[kit]]
-  kitcol <- as.data.frame(cbind("D"=rep(names(kits),unlist(lapply(kits,length))),"locus"=unlist(kits)))
-  x$locus <- toupper(strtrim(unlist(lapply(strsplit(toupper(x$locus),split="S[1-9]"),function(z) z[1])),3))
-  x <- merge(x,kitcol,by="locus")
-  kitcolor <- data.frame("D"=c("B","G","Y","R"),color=c("#1e7ba6","#2ea61e","#ffe51d","#ef2f2f")) ## yellow was: #ffef41, blue was: #0076c9, green was: #1eb04e
+  DD <- seq(from=20,by=200,len=4) ## c("R"=20,"Y"=220,"G"=420,"B"=620)
+  kitcolor <- data.frame("dye"=c("B","G","Y","R"),baseline=c(620,420,220,20),
+                         color=c("#1e7ba6","#2ea61e","#ffe51d","#ef2f2f")) ## yellow was: #ffef41, blue was: #0076c9, green was: #1eb04e
   ## Plot in colors
-  if(color) x <- merge(x,kitcolor,by="D",all.x=TRUE)
+  if(color) x <- merge(x,kitcolor,by="dye",all.x=TRUE)
   else x$color <- "#999999"
-  x <- allele2bp(x,kit=kit)
   x$expHeight <- x$exp*(x$height/x$area) ## gives the same proportionality between hat(h) and hat(A) as for observed h and A
   ## was: mh <- max(c(x$area,x$exp),na.rm=TRUE)
   mh <- max(c(x$height,x$expHeight),na.rm=TRUE)
@@ -61,10 +66,10 @@ plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,contributor=NULL
   x$plotObs <- x$height*170/mh
   ## was: x$plotExp <- x$exp*170/mh
   x$plotExp <- x$expHeight*170/mh
-  rx <- range(x$bp,na.rm=TRUE)
+  rx <- range(x$bp*4,na.rm=TRUE)
   par(mar=c(0,0,0,0))
   topskip <- rep(c(0,40,80,120),each=7) ## to make room for profiles in top of plot
-  plot(c(rx[1]-40,rx[2]),c(0,max(x$baseline,na.rm=TRUE)+170+topskip[length(profiles)]*addProfile),type="n",xlab="",ylab="",axes=FALSE,...); 
+  plot(c(rx[1]-40,rx[2]+40),c(min(x$baseline,.na.rm=TRUE)-20,max(x$baseline,na.rm=TRUE)+170+topskip[length(profiles)]*addProfile),type="n",xlab="",ylab="",axes=FALSE,...); 
   N <- nrow(x)
   yy <- rep(x$baseline,each=4)
   yy[seq(from=4,by=4,len=N)] <- NA
@@ -72,7 +77,7 @@ plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,contributor=NULL
   expPeak <- yy
   obsPeak[seq(from=2,by=4,len=N)] <- obsPeak[seq(from=2,by=4,len=N)]+x$plotObs
   expPeak[seq(from=2,by=4,len=N)] <- expPeak[seq(from=2,by=4,len=N)]+x$plotExp
-  xx <- rep(x$bp,each=4)+rep(c(-8,0,8,NA),N)
+  xx <- rep(x$bp,each=4)*4+rep(c(-8,0,8,NA),N)
   ## Adding 'grid' lines to the plot indicating the actual intensities of the peaks
   gl <- seq(from=250,to=mh,by=250)
   if(length(gl)<4) gl <- seq(from=100,to=mh,by=100)
@@ -85,18 +90,14 @@ plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,contributor=NULL
   polygon(xx,expPeak,border=1,lty=1,lwd=1)
   abline(h=DD)
   ## Adding allele and locus designations to plot
-  loci <- aggregate(x$allele,by=list(paste(x$locus)),median)
-  names(loci) <- c("locus","allele")
-  loci <- allele2bp(loci,kit=kit)
-  text(loci$bp,loci$baseline-25,paste(loci$locus),cex=0.75,adj=c(0.5,1)) ## was: -15
-  x$allele[x$locus=="AME" & x$allele=="1"] <- "X"
-  x$allele[x$locus=="AME" & x$allele=="3"] <- "Y"
-  text(x$bp,x$baseline-17,paste(x$allele),cex=0.75) ## was: -8
+  loci <- aggregate(list(bp=x$bp,baseline=x$baseline),by=list(locus=paste(x$locus)),mean)
+  text(loci$bp*4,loci$baseline-25,paste(loci$locus),cex=0.75,adj=c(0.5,1)) ## was: -15
+  text(x$bp*4,x$baseline-17,paste(x$allele),cex=0.75) ## was: -8
   #box()
   if(addProfile){ ## add profile table to plot
     addprofiles2plot(x=mean(rx),y=par("usr")[4],profiles=profiles,contributor=contributor,just=c(0.5,-0.6))
     ## Jakob plot
-    addHooks2plot(profiles,kit=kit)
+    addHooks2plot(profiles,data=x[,c("locus","allele","bp","baseline")])
     ## 
   }
 }
@@ -167,31 +168,30 @@ addprofiles2plot <- function (x, y, profiles, contributor, cex = c(0.85,1), just
   segments(xleft, ytop - nvcells * cellheight, xleft + nhcells * cellwidth, ytop - nvcells * cellheight, lwd = 2, col = 1)
 }
 
-profileHook <- function(x,kit="SGM"){
+profileHook <- function(x,data){ ## x, kit=
   allele <- as.data.frame(cbind(locus=names(x),do.call("rbind",strsplit(x,","))))
   allele1 <- allele[,c(1,2)] ## locus and first allele
   allele2 <- allele[,c(1,3)] ## locus and second allele
   names(allele1) <- names(allele2) <- c("locus","allele")
-  allele1 <- allele2bp(allele1,kit=kit)
-  allele2 <- allele2bp(allele2,kit=kit)
-  names(allele1) <- paste(names(allele1),"1",sep=".")
-  names(allele2) <- paste(names(allele2),"2",sep=".")
-  m.var <- c("locus","offset","baseline")
-  allele <- merge(allele1,allele2,by.x=paste(m.var,"1",sep="."),by.y=paste(m.var,"2",sep="."))
-  names(allele) <- c("locus","offset","baseline","allele1","bp1","allele2","bp2")
-  allele
+  allele1 <- merge(allele1,data,by=c("locus","allele"),all.x=TRUE) ## allele2bp(allele1,kit=kit)
+  allele2 <- merge(allele2,data,by=c("locus","allele"),all.x=TRUE) ## allele2bp(allele2,kit=kit)
+  names(allele1) <- paste(names(allele1),"1",sep="")
+  names(allele2) <- paste(names(allele2),"2",sep="")
+  m.var <- c("locus","baseline")
+  allele <- merge(allele1,allele2,by.x=paste(m.var,"1",sep=""),by.y=paste(m.var,"2",sep=""))
+  names(allele) <- c("locus","baseline","allele1","bp1","allele2","bp2")
+  convertTab(convertTab(allele),mode="num",subset=c("bp","baseline"))
 }
 
-addHooks2plot <- function(x,kit="SGM"){
+addHooks2plot <- function(x,data){ 
   x <- do.call("cbind",strsplit(x,"/"))
-  colnames(x) <- toupper(strtrim(unlist(lapply(strsplit(toupper(colnames(x)),split="S[1-9]"),function(z) z[1])),3))
-  x <- apply(x,1,profileHook,kit=kit)
+  x <- apply(x,1,profileHook,data=data)
   m <- length(x)
   bpskip <- ifelse(m==rep(2,m),c(-2,2),c(-2.5,0,2.5))
   for(j in 1:m){
     for(i in 1:nrow(x[[j]])){
-      with(x[[j]][i,],lines(c(bp1,bp1,bp2,bp2)+bpskip[j],baseline-c(0,4,4,0)*j,col=j,lwd=2))
-      if(x[[j]]$allele1[i]==x[[j]]$allele2[i]) with(x[[j]][i,],points(bp1+bpskip[j],baseline-4*j,pch=16,cex=0.8,col=j)) ## hom
+      with(x[[j]][i,],lines(c(bp1,bp1,bp2,bp2)*4+bpskip[j],baseline-c(0,4,4,0)*j,col=j,lwd=2))
+      if(x[[j]]$allele1[i]==x[[j]]$allele2[i]) with(x[[j]][i,],points(bp1*4+bpskip[j],baseline-4*j,pch=16,cex=0.8,col=j)) ## hom
     }
   }
 }
