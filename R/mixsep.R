@@ -317,7 +317,7 @@ locus.alternative <- function(x,s,J,m,est,p=0.001){
   jmax <- x[[s]]$Jmax[1]
   LocusTaus.min <- tav.locus(x[[s]],alpha=alfa(x,m=m),m=m)/(nrow(x[[s]])-1)
   ## Test for alternatives
-  if(length(J)==1) return(list(alts=alts.sort,Fstats=Fstats,LocusTaus=c(LocusTaus.min,LocusTaus.sort)))
+  if(length(J)==1 | nrow(x[[s]])==1) return(list(alts=alts.sort,Fstats=Fstats,LocusTaus=c(LocusTaus.min,LocusTaus.sort)))
   else{
     for(j in (1:length(J))[-jmax]){
       x[[s]][,PP] <- J[[j]]

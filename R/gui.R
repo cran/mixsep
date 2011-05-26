@@ -4,7 +4,7 @@ library(MASS)
 library(RODBC)
 
 mixsep <- function(){
-  version <- tclVar("0.1-4")
+  version <- tclVar("0.1-5")
   killR <- tclVar("")
   font14bf <- tkfont.create(family = "helvetica", size = 14, weight = "bold")
   font9bf <- tkfont.create(family = "helvetica", size = 9, weight = "bold")
@@ -692,11 +692,33 @@ mixsep <- function(){
       tkgrid(tklabel(colFrame,text="bp"),column=0,row=6,sticky="w")
       resetBP <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
       tkgrid(resetBP,column=1,row=6,sticky="w")
-      tkbind(resetBP,"<Button-1>",function()tcl("set",bpCol,"0"))
+      kitNormal <- function(){
+        tkconfigure(kit.ID,state="normal")
+        tkconfigure(kit.Mini,state="normal")
+        tkconfigure(kit.NGM,state="normal")
+        tkconfigure(kit.Plus,state="normal")
+        tkconfigure(kit.COfiler,state="normal")
+        tkconfigure(kit.SGM,state="normal")
+        tkconfigure(kit.SE,state="normal")
+        tkconfigure(kit.Profiler,state="normal")
+        tkconfigure(kit.ESI17,state="normal")
+      }
+      kitDisable <- function(){
+        tkconfigure(kit.ID,state="disabled")
+        tkconfigure(kit.Mini,state="disabled")
+        tkconfigure(kit.NGM,state="disabled")
+        tkconfigure(kit.Plus,state="disabled")
+        tkconfigure(kit.COfiler,state="disabled")
+        tkconfigure(kit.SGM,state="disabled")
+        tkconfigure(kit.SE,state="disabled")
+        tkconfigure(kit.Profiler,state="disabled")
+        tkconfigure(kit.ESI17,state="disabled")
+      }
+      tkbind(resetBP,"<Button-1>",function(){kitNormal();tcl("set",bpCol,"0")})
       tkgrid(tklabel(colFrame,text="Dye"),column=0,row=7,sticky="w")
       resetDye <- tklabel(colFrame,text="[RESET]",font=font7,foreground="blue")
       tkgrid(resetDye,column=1,row=7,sticky="w")
-      tkbind(resetDye,"<Button-1>",function()tcl("set",dyeCol,"0"))
+      tkbind(resetDye,"<Button-1>",function(){kitNormal();tcl("set",dyeCol,"0")})
       tclvalue(locusCol) <<- unlist(lapply(c("marker","Marker","locus","Locus","system","sys","DnaSystem"),grep,names(data)))[1]
       tclvalue(alleleCol) <<- unlist(lapply(c("type","Type","allele","Allele","Top_Allel_type"),grep,names(data)))[1]
       tclvalue(heightCol) <<- unlist(lapply(c("height","Height","hojde","Hojde","Top_Hoejde","hoejde"),grep,names(data)))[1]
@@ -707,8 +729,16 @@ mixsep <- function(){
       if(as.numeric(tclvalue(alleleCol))<0) tclvalue(alleleCol) <<- ""
       if(as.numeric(tclvalue(heightCol))<0) tclvalue(heightCol) <<- ""
       if(as.numeric(tclvalue(areaCol))<0) tclvalue(areaCol) <<- ""
-      if(as.numeric(tclvalue(bpCol))<0) tclvalue(bpCol) <<- ""
-      if(as.numeric(tclvalue(dyeCol))<0) tclvalue(dyeCol) <<- ""
+      if(as.numeric(tclvalue(bpCol))<0){
+        tclvalue(bpCol) <<- ""
+        kitNormal()
+      }
+      else tcl("set",kit,"0")
+      if(as.numeric(tclvalue(dyeCol))<0){
+        tclvalue(dyeCol) <<- ""
+        kitNormal()
+      }
+      else tcl("set",kit,"0")
       ## Check whether the auto-selected 'height' and 'area' columns contain zero or NA-observations
       if(!(paste(tclvalue(heightCol))=="" | paste(tclvalue(heightCol))=="0")){
         if(is.element("0",paste(data[,as.numeric(paste(tclvalue(heightCol)))]))) tclvalue(heightCol) <- ""
@@ -725,10 +755,16 @@ mixsep <- function(){
         if(tclvalue(heightCol)=="") tcl("set",heightCol,"0")
         tkgrid(tkradiobutton(colFrame,variable=areaCol,value=paste(i)),column=i+1,row=5)
         if(tclvalue(areaCol)=="") tcl("set",areaCol,"0")
-        tkgrid(tkradiobutton(colFrame,variable=bpCol,value=paste(i)),column=i+1,row=6)
-        if(tclvalue(bpCol)=="") tcl("set",bpCol,"0")
-        tkgrid(tkradiobutton(colFrame,variable=dyeCol,value=paste(i)),column=i+1,row=7)
-        if(tclvalue(dyeCol)=="") tcl("set",dyeCol,"0")
+        tkgrid(tkradiobutton(colFrame,variable=bpCol,value=paste(i),command=kitDisable),column=i+1,row=6)
+        if(tclvalue(bpCol)==""){
+          tcl("set",bpCol,"0")
+          kitNormal()
+        }
+        tkgrid(tkradiobutton(colFrame,variable=dyeCol,value=paste(i),command=kitDisable),column=i+1,row=7)
+        if(tclvalue(dyeCol)==""){
+          tcl("set",dyeCol,"0")
+          kitNormal()
+        }
         tkgrid(tklabel(colFrame,text=names(data)[i],font=font9bf),column=i+1,row=8)
         for(j in 1:4) tkgrid(tklabel(colFrame,text=paste(data[j,i])),column=i+1,row=8+j)
       }
@@ -745,18 +781,18 @@ mixsep <- function(){
       tkgrid(kitHead)
       kitSelect <- tkframe(kitFrame)
       tkgrid(tklabel(kitSelect,text="Applied Biosystems",font=font9bf),sticky="w",column=0,row=1)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="ID",text="Identifiler"),sticky="w",column=0,row=2)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Mini",text="MiniFiler"),sticky="w",column=0,row=3)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="NGM",text="NGM (SElect)"),sticky="w",column=0,row=4)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Plus",text="Profiler Plus"),sticky="w",column=0,row=5)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="COfiler",text="COfiler"),sticky="w",column=0,row=6)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="SGM",text="SGM Plus"),sticky="w",column=0,row=7)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="SE",text="SEfiler"),sticky="w",column=0,row=8)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Profiler",text="Profiler"),sticky="w",column=0,row=9)
+      tkgrid(kit.ID <- tkradiobutton(kitSelect,variable=kit,value="ID",text="Identifiler",state="disabled"),sticky="w",column=0,row=2)
+      tkgrid(kit.Mini <- tkradiobutton(kitSelect,variable=kit,value="Mini",text="MiniFiler",state="disabled"),sticky="w",column=0,row=3)
+      tkgrid(kit.NGM <- tkradiobutton(kitSelect,variable=kit,value="NGM",text="NGM (SElect)",state="disabled"),sticky="w",column=0,row=4)
+      tkgrid(kit.Plus <- tkradiobutton(kitSelect,variable=kit,value="Plus",text="Profiler Plus",state="disabled"),sticky="w",column=0,row=5)
+      tkgrid(kit.COfiler <- tkradiobutton(kitSelect,variable=kit,value="COfiler",text="COfiler",state="disabled"),sticky="w",column=0,row=6)
+      tkgrid(kit.SGM <- tkradiobutton(kitSelect,variable=kit,value="SGM",text="SGM Plus",state="disabled"),sticky="w",column=0,row=7)
+      tkgrid(kit.SE <- tkradiobutton(kitSelect,variable=kit,value="SE",text="SEfiler",state="disabled"),sticky="w",column=0,row=8)
+      tkgrid(kit.Profiler <- tkradiobutton(kitSelect,variable=kit,value="Profiler",text="Profiler",state="disabled"),sticky="w",column=0,row=9)
 #      tkgrid(tkradiobutton(kitSelect,variable=kit,value="Y",text="Yfiler"))
       tkgrid(tklabel(kitSelect,text="    ",font=font9bf),sticky="w",column=1,row=1)
       tkgrid(tklabel(kitSelect,text="Promega",font=font9bf),sticky="w",column=2,row=1)
-      tkgrid(tkradiobutton(kitSelect,variable=kit,value="ESI17",text="ESI17"),sticky="w",column=2,row=2)
+      tkgrid(kit.ESI17 <- tkradiobutton(kitSelect,variable=kit,value="ESI17",text="ESI17",state="disabled"),sticky="w",column=2,row=2)
 #      tkgrid(tkradiobutton(kitSelect,variable=kit,value="pkit1",text="Promega kit 1"),sticky="w",column=2,row=3)
 #      tkgrid(tkradiobutton(kitSelect,variable=kit,value="pkit2",text="Promega kit 2"),sticky="w",column=2,row=4)
       tkgrid(kitSelect)
@@ -850,8 +886,8 @@ mixsep <- function(){
       m2 <- tkradiobutton(contribFrame,variable=noContrib,value="2",text="2")
       if(maxns<=4) tkgrid(m2,column=2,row=2,sticky="w")
       m3 <- tkradiobutton(contribFrame,variable=noContrib,value="3",text="3")
-      if(maxns<=6) tkgrid(m3,column=3,row=2,sticky="w")
-      else noContrib <- 4 ## Too many observed alleles
+      if(maxns<=6) tkgrid(m3,column=3,row=2,sticky="w") ## 
+      if(maxns>6) tclvalue(noContrib) <<- 4 ## Too many observed alleles
       tkgrid(tklabel(contribFrame,text="Search for alternatives:"),column=0,row=4,sticky="e")
       altQ <- tklabel(contribFrame,text="[?]",font=font7,foreground="blue")
       tkgrid(altQ,column=1,row=4)
@@ -1228,7 +1264,7 @@ mixsep <- function(){
   areaCol <- tclVar("")
   bpCol <- tclVar("")
   dyeCol <- tclVar("")
-  kit <- tclVar("")
+  kit <- tclVar("0")
   rowsSelected <- tclVar("")
   pars <- tclVar("")
   res <- tclVar("")

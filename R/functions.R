@@ -133,6 +133,7 @@ that.locus <- function(x,alpha,m=2){
   if(m==2){
     if(any(is.na(x$P1))) return(0) 
     if(missing(alpha)){ alpha <- ahat.locus(x,m=m); alpha <- alpha$num/alpha$den }
+    alpha <- ifelse(is.na(alpha),0,alpha)
     x0 <- (x$P1-x$P2)*sum(x$area)/2
     x1 <- x$P2*sum(x$area)/2
     iW <- ginv(CA(x$height))
@@ -141,6 +142,7 @@ that.locus <- function(x,alpha,m=2){
   if(m==3){
     if(any(is.na(x$P1))) return(c(0,0)) 
     if(missing(alpha)){ alpha <- ahat.locus(x,m=m); alpha <- solve(alpha$den)%*%alpha$num }
+    alpha <- ifelse(is.na(alpha),0,alpha)
     X <- matrix(c(x$P1-x$P3,x$P2-x$P3),nrow(x),2)*sum(x$area)/2
     Xm <- x$P3*sum(x$area)/2
     iW <- ginv(CA(x$height))
