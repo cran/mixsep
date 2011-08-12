@@ -4,7 +4,7 @@ library(MASS)
 library(RODBC)
 
 mixsep <- function(){
-  version <- tclVar("0.1-6")
+  version <- tclVar("0.2")
   killR <- tclVar("")
   font14bf <- tkfont.create(family = "helvetica", size = 14, weight = "bold")
   font9bf <- tkfont.create(family = "helvetica", size = 9, weight = "bold")
@@ -363,6 +363,9 @@ mixsep <- function(){
       q("no")
     }
   }
+  userman <- function(){
+    print(vignette("mixsep"))
+  }
   colSelected <- function(){
     locus <- as.numeric(paste(tclvalue(locusCol)))
     allele <- as.numeric(paste(tclvalue(alleleCol)))
@@ -421,7 +424,7 @@ mixsep <- function(){
     TAB2()
     TAB3()
   }
-  continueData <- function(){
+  continueData <- function(justdata=FALSE){
     msdata <- get("mixsep.data",envir=.GlobalEnv)
     data <- msdata[[paste(tclvalue(dataid))]]$result$fulldata
     nr <- nrow(data)
@@ -434,6 +437,7 @@ mixsep <- function(){
       msdata[[paste(tclvalue(dataid))]]$result$data <- data
     else msdata[[paste(tclvalue(dataid))]]$result <- list(data=data)
     assign("mixsep.data",msdata,envir=.GlobalEnv)
+    if(justdata) return(NULL)
     tclvalue(rowsSelected) <<- "1"
     TAB3()
     TAB4()
@@ -534,7 +538,7 @@ mixsep <- function(){
       tclvalue(dropLocus) <<- paste(res$dropLoci,collapse=",",sep=",")
     }
     else dropLocus <<- tclVar("")
-    msdata[[paste(tclvalue(dataid))]]$result <- c(list(data=msdata[[paste(tclvalue(dataid))]]$result$data),res)
+    msdata[[paste(tclvalue(dataid))]]$result <- c(list(fulldata=msdata[[paste(tclvalue(dataid))]]$result$fulldata,data=msdata[[paste(tclvalue(dataid))]]$result$data),res)
     assign("mixsep.data",msdata,envir=.GlobalEnv)
     tclvalue(res) <<- "ok"
     tclvalue(pars) <<- "ok"
@@ -543,7 +547,14 @@ mixsep <- function(){
     tcl("update","idletasks")
     tk2notetab.select(tabwin,"Results")
   }
-  plotEpg <- function(plot=TRUE){
+  plotEpg <- function(plot=TRUE,justdata=FALSE){
+    if(justdata){
+      continueData(justdata=TRUE)
+      msdata <- get("mixsep.data",envir=.GlobalEnv)
+      result <- msdata[[paste(tclvalue(dataid))]]$result
+      plotEPG(result$data,addProfile=FALSE,justdata=TRUE,profiles=c("Just data plot"))
+      return(NULL)
+    }
     msdata <- get("mixsep.data",envir=.GlobalEnv)
     result <- msdata[[paste(tclvalue(dataid))]]$result
     contributor <- rownames(result$profiles)
@@ -856,9 +867,10 @@ mixsep <- function(){
       tkgrid(srMain)
       tkgrid(tklabel(frame2,text=""))
       srBottom <- tkframe(frame2)
-      contButton <- tkbutton(srBottom,text="Continue",default="active",command=continueData)
+      contButton <- tkbutton(srBottom,text="Continue",default="active",command=function()continueData(justdata=FALSE))
+      selectplotButton <- tkbutton(srBottom,text="Plot selected data",command=function()plotEpg(plot=TRUE,justdata=TRUE))
       resetButton <- tkbutton(srBottom,text="Reset",command=resetData)
-      tkgrid(contButton,tklabel(srBottom,text="   "),resetButton)
+      tkgrid(contButton,tklabel(srBottom,text="   "),selectplotButton,tklabel(srBottom,text="   "),resetButton)
       tkfocus(contButton)
       tkgrid(srBottom)
     }
@@ -893,8 +905,10 @@ mixsep <- function(){
       header <- tclVar()
       tclvalue(header) <- paste("Analysis of case:",tclvalue(dataid))
       tkgrid(tklabel(parFrame,text=paste(tclvalue(header)),font=font9bf),columnspan=7) 
-      noText <- tklabel(contribFrame,text="Number of contributors:") 
-      noContrib <<- tclVar(ceiling(maxns/2))
+      noText <- tklabel(contribFrame,text="Number of contributors:")
+      nocontr <- ceiling(maxns/2)
+      if(nocontr<2) nocontr <- 2
+      noContrib <<- tclVar(nocontr)
       tkgrid(noText,column=0,row=2,sticky="e")
       m2 <- tkradiobutton(contribFrame,variable=noContrib,value="2",text="2")
       if(maxns<=4) tkgrid(m2,column=2,row=2,sticky="w")
@@ -1359,19 +1373,21 @@ mixsep <- function(){
   button.delete <- tkbutton(frontFrame, text="   Delete file  ",command=removeFile)
   button.file <- tkbutton(frontFrame,   text="    Add file    ",command=function()getFile(mult=FALSE))
   button.multfile <- tkbutton(frontFrame,   text="    Add multi-sample file    ",command=function()getFile(mult=TRUE))
-  button.quit <- tkbutton(frontFrame,   text="      Quit      ",command=killMs)
   if(tclvalue(db)!="" & tclvalue(dbtab)!=""){ ## Allows import from database
     button.db <- tkbutton(frontFrame,   text="    Database    ",command=getDB)  
     tkgrid(button.analyse,tklabel(frontFrame,text="  "),button.delete,tklabel(frontFrame,text="  "),
-           button.file,tklabel(frontFrame,text="  "),button.multfile,tklabel(frontFrame,text="  "),
-           button.db,tklabel(frontFrame,text="  "),button.quit)
+           button.file,tklabel(frontFrame,text="  "),button.multfile,tklabel(frontFrame,text="  "),button.db)
   }
   else ## If no database connection specified
     tkgrid(button.analyse,tklabel(frontFrame,text="  "),button.delete,tklabel(frontFrame,text="  "),
-           button.file,tklabel(frontFrame,text="  "),button.multfile,tklabel(frontFrame,text="  "),button.quit)
-    tkgrid(button.analyse,tklabel(frontFrame,text="  "),button.delete,tklabel(frontFrame,text="  "),
-         button.file,tklabel(frontFrame,text="  "),button.multfile,tklabel(frontFrame,text="  "),button.quit)
+           button.file,tklabel(frontFrame,text="  "),button.multfile)
   tkgrid(frontFrame)
+  helpquitFrame <- tkframe(tab1)
+  button.quit <- tkbutton(helpquitFrame,   text="      Quit      ",command=killMs)
+  button.help <- tkbutton(helpquitFrame,   text="   User manual   ",command=userman)
+  tkgrid(tklabel(helpquitFrame,text="\n"))
+  tkgrid(button.help,tklabel(helpquitFrame,text="  "),button.quit)
+  tkgrid(helpquitFrame)
   tkgrid(tklabel(tab1,text="\n\n"))
   tkfocus(button.analyse)
   tkwait.window(msmain)

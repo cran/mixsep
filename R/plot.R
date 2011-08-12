@@ -48,17 +48,18 @@ addBpDye <- function(x,kit=c("ID","Mini","Plus","COfiler","SGM","SE","Profiler",
   x$bp <- x$offset+4*( round(x$allele) + (x$allele-round(x$allele))*2.5 )
   x$offset <- NULL
   if(any(ame)) x <- rbind(x,xame)
-  x[order(factor(x$dye,c("B","G","Y","R")),x$bp),]
+  x[order(factor(x$dye,c("B","G","Y","R")),x$bp),c("locus","allele","height","area","bp","dye")]
 }
 
 
-plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,contributor=NULL,...){  
+plotEPG <- function(x,color=TRUE,justdata=FALSE,addProfile=FALSE,profiles=NULL,contributor=NULL,...){  
   DD <- seq(from=20,by=200,len=4) ## c("R"=20,"Y"=220,"G"=420,"B"=620)
   kitcolor <- data.frame("dye"=c("B","G","Y","R"),baseline=c(620,420,220,20),
                          color=c("#1e7ba6","#2ea61e","#ffe51d","#ef2f2f")) ## yellow was: #ffef41, blue was: #0076c9, green was: #1eb04e
   ## Plot in colors
   if(color) x <- merge(x,kitcolor,by="dye",all.x=TRUE)
   else x$color <- "#999999"
+  if(justdata) x$expHeight <- x$height ## No expected heights given for 'justdata'
   x$expHeight <- x$exp*(x$height/x$area) ## gives the same proportionality between hat(h) and hat(A) as for observed h and A
   ## was: mh <- max(c(x$area,x$exp),na.rm=TRUE)
   mh <- max(c(x$height,x$expHeight),na.rm=TRUE)
@@ -69,7 +70,7 @@ plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,contributor=NULL
   rx <- range(x$bp*4,na.rm=TRUE)
   par(mar=c(0,0,0,0))
   topskip <- rep(c(0,40,80,120),each=7) ## to make room for profiles in top of plot
-  plot(c(rx[1]-40,rx[2]+40),c(min(x$baseline,.na.rm=TRUE)-20,max(x$baseline,na.rm=TRUE)+170+topskip[length(profiles)]*addProfile),type="n",xlab="",ylab="",axes=FALSE,...); 
+  plot(c(rx[1]-40,rx[2]+40),c(min(x$baseline,.na.rm=TRUE)-20,max(x$baseline,na.rm=TRUE)+170+topskip[length(profiles)]*addProfile),type="n",xlab="",ylab="",axes=FALSE,...)
   N <- nrow(x)
   yy <- rep(x$baseline,each=4)
   yy[seq(from=4,by=4,len=N)] <- NA
@@ -87,7 +88,7 @@ plotEPG <- function(x,color=TRUE,addProfile=FALSE,profiles=NULL,contributor=NULL
   abline(h=(hh <- rep(gridLines,length(DD))+rep(DD,each=length(gridLines))),col="#efefef")
   text(rep(rx[1]-30,length(hh)),hh,gl,cex=0.60,adj=c(1,0.5))
   polygon(xx,obsPeak,col=paste(x$color),border=NA)
-  polygon(xx,expPeak,border=1,lty=1,lwd=1)
+  if(!justdata) polygon(xx,expPeak,border=1,lty=1,lwd=1)
   abline(h=DD)
   ## Adding allele and locus designations to plot
   loci <- aggregate(list(bp=x$bp,baseline=x$baseline),by=list(locus=paste(x$locus)),mean)

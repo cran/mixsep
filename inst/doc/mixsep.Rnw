@@ -55,6 +55,10 @@ more details and motivation please see that paper.
   up-to-date compared to version of \pkg{mixsep} available at CRAN. It
   is expected to be fixed during July/August of 2011.}
 
+\tableofcontents
+
+\newpage
+
 \section{Create a desktop shortcut (Windows only)}
 \label{sec:shortcut}
 
@@ -272,7 +276,7 @@ window. Note that \textsl{Proeve\_ID} is fixed for all samples, but
 since this column contain the case number information we also mark
 this column (See bottom screen shot of Figure~\ref{fig:multifiles}.
 
-\newpage
+% \newpage
 
 \section{Determine the best matching configuration}
 \label{sec:wangbm}
