@@ -48,14 +48,16 @@ addBpDye <- function(x,kit=c("ID","Mini","Plus","COfiler","SGM","SE","Profiler",
   x$bp <- x$offset+4*( round(x$allele) + (x$allele-round(x$allele))*2.5 )
   x$offset <- NULL
   if(any(ame)) x <- rbind(x,xame)
-  x[order(factor(x$dye,c("B","G","Y","R")),x$bp),c("locus","allele","height","area","bp","dye")]
+  if(is.element("R",x$dye)) return(x[order(factor(x$dye,c("B","G","Y","R")),x$bp),c("locus","allele","height","area","bp","dye")])
+  else return(x[order(factor(x$dye,c("B","G","Y")),x$bp),c("locus","allele","height","area","bp","dye")])
 }
 
-
-plotEPG <- function(x,color=TRUE,justdata=FALSE,addProfile=FALSE,profiles=NULL,contributor=NULL,...){  
-  DD <- seq(from=20,by=200,len=4) ## c("R"=20,"Y"=220,"G"=420,"B"=620)
-  kitcolor <- data.frame("dye"=c("B","G","Y","R"),baseline=c(620,420,220,20),
+plotEPG <- function(x,color=TRUE,justdata=FALSE,addProfile=FALSE,profiles=NULL,contributor=NULL,...){
+  kitcolor <- data.frame("dye"=c("B","G","Y","R"),baseline=seq(from=620,by=-200,len=4),
                          color=c("#1e7ba6","#2ea61e","#ffe51d","#ef2f2f")) ## yellow was: #ffef41, blue was: #0076c9, green was: #1eb04e
+  kitcolor <- kitcolor[is.element(kitcolor$dye,x$dye),]
+  while(min(kitcolor$baseline>20)) kitcolor$baseline <- kitcolor$baseline-200
+  DD <- kitcolor$baseline
   ## Plot in colors
   if(color) x <- merge(x,kitcolor,by="dye",all.x=TRUE)
   else x$color <- "#999999"
@@ -91,7 +93,7 @@ plotEPG <- function(x,color=TRUE,justdata=FALSE,addProfile=FALSE,profiles=NULL,c
   if(!justdata) polygon(xx,expPeak,border=1,lty=1,lwd=1)
   abline(h=DD)
   ## Adding allele and locus designations to plot
-  loci <- aggregate(list(bp=x$bp,baseline=x$baseline),by=list(locus=paste(x$locus)),mean)
+  loci <- aggregate(cbind(bp,baseline)~locus,data=x,FUN=mean)
   text(loci$bp*4,loci$baseline-25,paste(loci$locus),cex=0.75,adj=c(0.5,1)) ## was: -15
   text(x$bp*4,x$baseline-17,paste(x$allele),cex=0.75) ## was: -8
   #box()

@@ -4,7 +4,7 @@ library(MASS)
 library(RODBC)
 
 mixsep <- function(){
-  version <- tclVar("0.2")
+  version <- tclVar("0.2.1")
   killR <- tclVar("")
   font14bf <- tkfont.create(family = "helvetica", size = 14, weight = "bold")
   font9bf <- tkfont.create(family = "helvetica", size = 9, weight = "bold")
@@ -748,7 +748,7 @@ mixsep <- function(){
       tclvalue(alleleCol) <<- unlist(lapply(c("type","Type","allele","Allele","Top_Allel_type"),grep,names(data)))[1]
       tclvalue(heightCol) <<- unlist(lapply(c("height","Height","hojde","Hojde","Top_Hoejde","hoejde"),grep,names(data)))[1]
       tclvalue(areaCol) <<- unlist(lapply(c("area","Area","areal","Areal","Top_Areal"),grep,names(data)))[1]
-      tclvalue(bpCol) <<- unlist(lapply(c("bp","Bp","BP","fragment","Fragment","Top_BP"),grep,names(data)))[1]
+      tclvalue(bpCol) <<- unlist(lapply(c("bp","Bp","BP","fragment","Fragment","Top_BP","size","Size","Length","length"),grep,names(data)))[1]
       tclvalue(dyeCol) <<- unlist(lapply(c("dye","Dye","color","Color","farve","Farve"),grep,names(data)))[1]
       if(as.numeric(tclvalue(locusCol))<0) tclvalue(locusCol) <<- ""
       if(as.numeric(tclvalue(alleleCol))<0) tclvalue(alleleCol) <<- ""
