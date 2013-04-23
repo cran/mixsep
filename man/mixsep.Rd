@@ -28,7 +28,7 @@
 \examples{
 ## The file wang.csv in the installation directory may be used for exemplification.
 ## The 'wang.csv' is located in the folder quoted below:
-cat(paste(.find.package("mixsep"),"data",sep=.Platform$file.sep))
+cat(paste(find.package("mixsep"),"data",sep=.Platform$file.sep))
 \dontrun{mixsep()}
 }
 

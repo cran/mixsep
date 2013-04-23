@@ -3,13 +3,12 @@
 \alias{wang}
 \title{Two-person DNA mixture published by Wang et al. (2006)}
 \description{
-  Two-person DNA mixture typed on 13 STR loci. 
-}
-\usage{
-## The data is stored in a comma separated spread sheet file (.csv).
-## The location of the file is returned by running the code below:
-## cat(paste(.find.package("mixsep"),"data",sep=.Platform$file.sep))
-## It can be copied to the desktop by makeShortcut(wang2desktop=TRUE)
+  Two-person DNA mixture typed on 13 STR loci.
+
+  The data is stored in a comma separated spread sheet file (.csv).
+  The location of the file is returned by running the code below:
+  cat(paste(find.package(\"mixsep\"),\"data\",sep=.Platform$file.sep))
+  It can be copied to the desktop by makeShortcut(wang2desktop=TRUE)
 }
 \format{A spread sheet with three columns: Locus, Allele and Area.}
 \references{

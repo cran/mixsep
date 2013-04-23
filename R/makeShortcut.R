@@ -1,6 +1,6 @@
 makeShortcut <- function(dbfile="",wang2desktop=FALSE){
   if(grepl("win",tolower(.Platform$OS.type))){ ## Windows
-    mixsepdir <- .find.package("mixsep")
+    mixsepdir <- find.package("mixsep")
     ## Create runmixsep.R script
     if(dbfile!=""){ ## If a file of DB connector information is given:
       dblines <- readLines(file(dbfile,'r')) 

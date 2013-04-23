@@ -22,9 +22,9 @@ URL: \tab http://people.math.aau.dk/~tvede/mixsep\cr
 
 Index:
 \preformatted{
-makeShortcut                                                Make Desktop shortcut on Windows operating system
-mixsep                                                      Starts the DNA mixture separation
-wang                                                        Two-person DNA mixture published by Wang et al. (2006)
+makeShortcut   Make Desktop shortcut on Windows operating system
+mixsep         Starts the DNA mixture separation
+wang           Two-person DNA mixture published by Wang et al. (2006)
 }
 
 After the package is loaded by library(mixsep) the GUI is started by

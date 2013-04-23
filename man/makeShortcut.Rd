@@ -16,17 +16,15 @@
   \item{dbfile}{A file containing the information needed to connect to a
     database with the necessary data. The file is expected to have four
     (4) rows of the form:
-    db = "Connection information to the database"
-    dbtab = "Which table should be attached"
-    dbcase = "The case containing the unique 'case' identifier used to
-    extract case specific information" 
-    dbcols = "Additional database columns needed to uniquely identify
-    different PCR runs, re-runs, etc. with the same 'case' identifier"
+    db = \"Connection information to the database\"
+    dbtab = \"Which table should be attached\"
+    dbcase = \"The case containing the unique 'case' identifier used to extract case specific information\" 
+    dbcols = \"Additional database columns needed to uniquely identify different PCR runs, re-runs, etc. with the same 'case' identifier\"
     However, lines with comments (identified by # are allowed). If a
     variable has more arguments these are separated by semicolons
-    ";", e.g. dbcols = "PCR_run; Replicate".
+    \";\", e.g. dbcols = \"PCR_run; Replicate\".
   }
-  \item{wang2desktop}{Logical: If TRUE the example data file 'wang.csv'
+  \item{wang2desktop}{Logical: If TRUE the example data file \'wang.csv\'
     is copied to the Windows desktop. Default is FALSE which only
     creates a shortcut for lauching the mixture separator.}
 }

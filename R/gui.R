@@ -4,7 +4,8 @@ library(MASS)
 library(RODBC)
 
 mixsep <- function(){
-  version <- tclVar("0.2.1")
+  if(!exists("mixsep.env")) mixsep.env <- new.env(hash=TRUE,size=NA) ## mixsep.env don't exits - create it ##
+  version <- tclVar("0.2.1-2")
   killR <- tclVar("")
   font14bf <- tkfont.create(family = "helvetica", size = 14, weight = "bold")
   font9bf <- tkfont.create(family = "helvetica", size = 9, weight = "bold")
@@ -46,7 +47,8 @@ mixsep <- function(){
       for(i in length(querySelection):1) tkdelete(querylist,querySelection[i]) 
     }
     addDBsample <- function(){
-      if(exists("mixsep.data",envir=.GlobalEnv)) data <- get("mixsep.data",envir=.GlobalEnv)
+      ## CHANGE: if(exists("mixsep.data",envir=.GlobalEnv)) data <- get("mixsep.data",envir=.GlobalEnv)
+      if(exists("mixsep.data",envir=mixsep.env)) data <- get("mixsep.data",envir=mixsep.env)
       else data <- list()
       qlist <- unlist(strsplit(tclvalue(tkget(querylist,0,"end"))," "))
       querySelection <- qlist[as.numeric(tkcurselection(querylist))+1] 
@@ -71,7 +73,8 @@ mixsep <- function(){
         }
       }
       odbcClose(conct)
-      assign("mixsep.data",data,envir=.GlobalEnv)
+      ## CHANGE: assign("mixsep.data",data,envir=.GlobalEnv)
+      assign("mixsep.data",data,envir=mixsep.env)
     }
     ## Main DB window
     dbTitle <- tclVar("")
@@ -133,7 +136,8 @@ mixsep <- function(){
     nameInput <- tclvalue(tkgetOpenFile(parent=msmain,initialdir=tclvalue(path),multiple="true",
                                         filetypes="{{CSV Files} {.csv .txt}} {{Tab-delimited Files} {.tab}}"))
     if(nameInput=="") return(NULL)
-    if(exists("mixsep.data",envir=.GlobalEnv)) data <- get("mixsep.data",envir=.GlobalEnv)
+    ## CHANGE: if(exists("mixsep.data",envir=.GlobalEnv)) data <- get("mixsep.data",envir=.GlobalEnv)
+    if(exists("mixsep.data",envir=mixsep.env)) data <- get("mixsep.data",envir=mixsep.env)
     else data <- list()
     mpath <- getMultipath(nameInput)
     tclvalue(path) <<- mpath
@@ -209,16 +213,19 @@ mixsep <- function(){
         }
       }
     }
-    assign("mixsep.data",data,envir=.GlobalEnv)
+    ## CHANGE: assign("mixsep.data",data,envir=.GlobalEnv)
+    assign("mixsep.data",data,envir=mixsep.env)
     tkselection.clear(caselist,1,length(data)-1)
     tkselection.set(caselist,0)
   }
   removeFile <- function(){
-    if(!exists("mixsep.data",envir=.GlobalEnv)){
+    ## CHANGE: if(!exists("mixsep.data",envir=.GlobalEnv)){
+    if(!exists("mixsep.data",envir=mixsep.env)){
       tkmessageBox(title="No files exists",message="No files exists",icon="error",type="ok")
       return(NULL)
     }
-    cases <- names(get("mixsep.data",envir=.GlobalEnv))
+    ## CHANGE: cases <- names(get("mixsep.data",envir=.GlobalEnv))
+    cases <- names(get("mixsep.data",envir=mixsep.env))
     caseSelection <- as.numeric(tkcurselection(caselist))+1
     caseChoice <- cases[caseSelection]
     if(length(caseChoice)==0){
@@ -232,7 +239,8 @@ mixsep <- function(){
                                      icon="error",type="okcancel")
         if(tclvalue(deleteActive)=="ok"){
           tkdelete(caselist,0)
-          assign("mixsep.data",list(),envir=.GlobalEnv)
+          ## CHANGE: assign("mixsep.data",list(),envir=.GlobalEnv)
+          assign("mixsep.data",list(),envir=mixsep.env)
           ## Reset control variables
           tclvalue(dataid) <<- ""
           tclvalue(locusCol) <<- ""
@@ -261,7 +269,8 @@ mixsep <- function(){
         }
       }
       else{ tkdelete(caselist,0)
-            assign("mixsep.data",list(),envir=.GlobalEnv)
+            ## CHANGE: assign("mixsep.data",list(),envir=.GlobalEnv)
+            assign("mixsep.data",list(),envir=mixsep.env)
           }
     }
     else{
@@ -273,12 +282,14 @@ mixsep <- function(){
         caseActive <- caseSelection[activeCase]
         caseSelection <- caseSelection[-activeCase]
       }
-      data <- get("mixsep.data",envir=.GlobalEnv)
+      ## CHANGE: data <- get("mixsep.data",envir=.GlobalEnv)
+      data <- get("mixsep.data",envir=mixsep.env)
       for(i in length(rmList):1){
         data <- data[names(data)!=rmList[i]]
         tkdelete(caselist,caseSelection[i]-1)
       }
-      assign("mixsep.data",data,envir=.GlobalEnv)
+      ## CHANGE: assign("mixsep.data",data,envir=.GlobalEnv)
+      assign("mixsep.data",data,envir=mixsep.env)
       if(!is.na(activeCase)){
         deleteActive <- tclVar("")
         deleteActive <- tkmessageBox(title="Deleting the active file",message="You will delete the active file currently under analysis",
@@ -286,7 +297,8 @@ mixsep <- function(){
         if(tclvalue(deleteActive)=="ok"){
           data <- data[names(data)!=rmActive]
           tkdelete(caselist,caseActive-1)
-          assign("mixsep.data",data,envir=.GlobalEnv)
+          ## CHANGE: assign("mixsep.data",data,envir=.GlobalEnv)
+          assign("mixsep.data",data,envir=mixsep.env)
           ## Reset control variables
           tclvalue(dataid) <<- ""
           tclvalue(locusCol) <<- ""
@@ -317,12 +329,14 @@ mixsep <- function(){
       }
     }
   }
-  openAnalysis <- function(){  
-    if(!exists("mixsep.data",env=.GlobalEnv)){
+  openAnalysis <- function(){
+    ## CHANGE: if(!exists("mixsep.data",envir=.GlobalEnv)){
+    if(!exists("mixsep.data",envir=mixsep.env)){
       tkmessageBox(title="No data files loaded",message="No data files loaded!",icon="error",type="ok")
       return(NULL)
     }
-    msdata <- get("mixsep.data",envir=.GlobalEnv)
+    ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+    msdata <- get("mixsep.data",envir=mixsep.env)
     cases <- names(msdata)
     if(length(as.numeric(tkcurselection(caselist)))>1){
       tkmessageBox(title="Multiple files selected",message="Only one file can be analysed at the time",icon="error",type="ok")
@@ -383,19 +397,22 @@ mixsep <- function(){
       return(NULL)
     }
     else if(is.na(height) | (height<1)){
-      msdata <- get("mixsep.data",env=.GlobalEnv)
+      ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+      msdata <- get("mixsep.data",envir=mixsep.env)
       data <- msdata[[tclvalue(dataid)]]$data
       data$heightFromArea <- as.numeric(paste(data[,area]))/10
       height <- ncol(data)
     }
     else if(is.na(area) | (area<1)){
-      msdata <- get("mixsep.data",env=.GlobalEnv)
+      ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+      msdata <- get("mixsep.data",envir=mixsep.env)
       data <- msdata[[tclvalue(dataid)]]$data
       data$areaFromHeight <- as.numeric(paste(data[,height]))*10
       area <- ncol(data)
     }
     else{
-      msdata <- get("mixsep.data",env=.GlobalEnv)
+      ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+      msdata <- get("mixsep.data",envir=mixsep.env)
       data <- msdata[[tclvalue(dataid)]]$data
     }
     if(any(is.na(c(locus,allele,height,area))) | any(c(locus,allele,height,area)<1)){
@@ -419,13 +436,15 @@ mixsep <- function(){
       data$dye <- toupper(strtrim(gsub("[0-9]","",data$dye),1))
       data <- data[order(factor(data$dye,levels=c("B","G","Y","R","O")),data$bp),] ## Blue > Green > Yellow > Red > Orange
       msdata[[tclvalue(dataid)]]$result <- list(fulldata=data,data=data)
-      assign("mixsep.data",msdata,env=.GlobalEnv)
+      ## CHANGE: assign("mixsep.data",msdata,envir=.GlobalEnv)
+      assign("mixsep.data",msdata,envir=mixsep.env)
     }
     TAB2()
     TAB3()
   }
   continueData <- function(justdata=FALSE){
-    msdata <- get("mixsep.data",envir=.GlobalEnv)
+    ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+    msdata <- get("mixsep.data",envir=mixsep.env)
     data <- msdata[[paste(tclvalue(dataid))]]$result$fulldata
     nr <- nrow(data)
     selectRows <- numeric()
@@ -436,7 +455,8 @@ mixsep <- function(){
     if(is.list(msdata[[paste(tclvalue(dataid))]]$result))
       msdata[[paste(tclvalue(dataid))]]$result$data <- data
     else msdata[[paste(tclvalue(dataid))]]$result <- list(data=data)
-    assign("mixsep.data",msdata,envir=.GlobalEnv)
+    ## CHANGE: assign("mixsep.data",msdata,envir=.GlobalEnv)
+    assign("mixsep.data",msdata,envir=mixsep.env)
     if(justdata) return(NULL)
     tclvalue(rowsSelected) <<- "1"
     TAB3()
@@ -458,7 +478,8 @@ mixsep <- function(){
   callMixsep <- function(){
     tkconfigure(msmain,cursor="watch")
     tcl("update","idletasks")
-    msdata <- get("mixsep.data",envir=.GlobalEnv)
+    ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+    msdata <- get("mixsep.data",envir=mixsep.env)
     data <- msdata[[paste(tclvalue(dataid))]]$result$data
     names(data) <- c("locus","allele","height","area","bp","dye") ## was without "bp" and "dye"
     data <- convertTab(data)
@@ -539,7 +560,8 @@ mixsep <- function(){
     }
     else dropLocus <<- tclVar("")
     msdata[[paste(tclvalue(dataid))]]$result <- c(list(fulldata=msdata[[paste(tclvalue(dataid))]]$result$fulldata,data=msdata[[paste(tclvalue(dataid))]]$result$data),res)
-    assign("mixsep.data",msdata,envir=.GlobalEnv)
+    ## CHANGE: assign("mixsep.data",msdata,envir=.GlobalEnv)
+    assign("mixsep.data",msdata,envir=mixsep.env)
     tclvalue(res) <<- "ok"
     tclvalue(pars) <<- "ok"
     TAB4()
@@ -550,12 +572,14 @@ mixsep <- function(){
   plotEpg <- function(plot=TRUE,justdata=FALSE){
     if(justdata){
       continueData(justdata=TRUE)
-      msdata <- get("mixsep.data",envir=.GlobalEnv)
+      ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+      msdata <- get("mixsep.data",envir=mixsep.env)
       result <- msdata[[paste(tclvalue(dataid))]]$result
       plotEPG(result$data,addProfile=FALSE,justdata=TRUE,profiles=c("Just data plot"))
       return(NULL)
     }
-    msdata <- get("mixsep.data",envir=.GlobalEnv)
+    ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+    msdata <- get("mixsep.data",envir=mixsep.env)
     result <- msdata[[paste(tclvalue(dataid))]]$result
     contributor <- rownames(result$profiles)
     data <- result$data
@@ -621,7 +645,8 @@ mixsep <- function(){
   }
   exportResult <- function(){ ### HERE - Export of data does not work
     plotEpg(plot=FALSE) ## Refreshes the selection
-    result <- get("mixsep.data",envir=.GlobalEnv)[[paste(tclvalue(dataid))]]$result
+    ## CHANGE: result <- get("mixsep.data",envir=.GlobalEnv)[[paste(tclvalue(dataid))]]$result
+    result <- get("mixsep.data",envir=mixsep.env)[[paste(tclvalue(dataid))]]$result
     ## Profiles
     res.prof <- apply(result$profiles,2,paste,collapse="/")
     exportFrame <- rbind(res.prof,result$alternatives)
@@ -677,7 +702,8 @@ mixsep <- function(){
     }
     else if(paste(tclvalue(dataid))!="" & paste(tclvalue(locusCol))==""){
       header <- tclVar()
-      msdata <- get("mixsep.data",envir=.GlobalEnv)
+      ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+      msdata <- get("mixsep.data",envir=mixsep.env)
       data <- msdata[[tclvalue(dataid)]]$data
       nc <- ncol(data)
       colFrame <- tkframe(frame2)
@@ -832,7 +858,8 @@ mixsep <- function(){
     }
     else{
       header <- tclVar()
-      msdata <- get("mixsep.data",envir=.GlobalEnv)
+      ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+      msdata <- get("mixsep.data",envir=mixsep.env)
       data <- msdata[[tclvalue(dataid)]]$result$data
       nr <- nrow(data)
       printRow <- 25
@@ -894,7 +921,8 @@ mixsep <- function(){
       known2Frame <- tkframe(parFrame,relief="groove",borderwidth=2)
       known3Frame <- tkframe(parFrame,relief="groove",borderwidth=2)
       header <- tclVar()
-      msdata <- get("mixsep.data",envir=.GlobalEnv)
+      ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+      msdata <- get("mixsep.data",envir=mixsep.env)
       data <- msdata[[tclvalue(dataid)]]$result$data
       names(data) <- c("locus","allele","height","area")
       locusorder <- unique(paste(data$locus))
@@ -994,7 +1022,8 @@ mixsep <- function(){
       header <- tclVar()
       tclvalue(header) <- paste("Analysis of case:",tclvalue(dataid))
       tkgrid(tklabel(resFrame,text=paste(tclvalue(header)),font=font9bf),columnspan=7,row=0)
-      result <- get("mixsep.data",envir=.GlobalEnv)[[paste(tclvalue(dataid))]]$result
+      ## CHANGE: result <- get("mixsep.data",envir=.GlobalEnv)[[paste(tclvalue(dataid))]]$result
+      result <- get("mixsep.data",envir=mixsep.env)[[paste(tclvalue(dataid))]]$result
       res.prof <- apply(result$profiles,2,paste,collapse="/")
       res.alt <- result$alternatives
       plotMe <- as.numeric(unlist(strsplit(tclvalue(plotselect),",")))
@@ -1348,12 +1377,14 @@ mixsep <- function(){
   tkbind(caselist,"<Return>",openAnalysis)
   tkbind(caselist,"<Double-Button-1>",openAnalysis)
   tkbind(caselist,"<Control-a>",function()tkselection.set(caselist,0,tclvalue(tcl(caselist,"size"))))
-  if(!exists("mixsep.data",envir=.GlobalEnv)){
+  ## CHANGE: if(!exists("mixsep.data",envir=.GlobalEnv)){
+  if(!exists("mixsep.data",envir=mixsep.env)){
     tkgrid(caselist,scr)
     tkgrid.configure(scr,rowspan=20,sticky="nse")
   }
   else{
-    msdata <- get("mixsep.data",envir=.GlobalEnv)
+    ## CHANGE: msdata <- get("mixsep.data",envir=.GlobalEnv)
+    msdata <- get("mixsep.data",envir=mixsep.env)
     if(length(msdata)==0){
       tkgrid(caselist,scr)
       tkgrid.configure(scr,rowspan=20,sticky="nse")
